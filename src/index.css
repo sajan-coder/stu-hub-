@@ -1,0 +1,122 @@
+@import url('https://rsms.me/inter/inter.css');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Scholar "Quiet Luxury" Palette */
+  --bg-app: #F8F8F7;
+  /* Warm, sophisticated off-white to reduce starkness */
+  --bg-sidebar: #FFFFFF;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F1F1F0;
+
+  --accent-academic: #F2E27D;
+  /* Softened Academic Yellow */
+  --text-primary: #1A1A1A;
+  --text-secondary: #5F5F5E;
+  --text-tertiary: #A1A1A0;
+
+  --border-subtle: #E8E8E7;
+  --border-strong: #DCDCDA;
+
+  --radius-xl: 14px;
+  --radius-lg: 10px;
+  --radius-md: 8px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.04);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  /* Refined typography settings for "Premium SaaS" feel */
+  letter-spacing: -0.015em;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  color: #000000;
+}
+
+/* ── Scholar Surface System ── */
+.scholar-surface {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.scholar-surface:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.scholar-btn-primary {
+  background: var(--text-primary);
+  color: #FFFFFF;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: var(--radius-lg);
+  font-size: 13.5px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.scholar-btn-primary:hover {
+  background: #000000;
+  transform: translateY(-1px);
+}
+
+.scholar-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+/* ── Custom Scrollbar ── */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E0E0DF;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #D1D1D0;
+}
+
+.selection\:bg-accent {
+  --tw-selection-bg: rgba(242, 226, 125, 0.4);
+}
