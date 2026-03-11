@@ -154,127 +154,127 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
             let text = '';
             try {
 
-            // 1. Extraction (PDF + plain text only; OCR/images disabled)
-            try {
-                if (file.mimetype === 'application/pdf') {
-                    const dataBuffer = fs.readFileSync(file.path);
-                    const pdfData = await pdf(dataBuffer);
-                    text = pdfData.text || '';
-                } else {
-                    const textLikeTypes = [
-                        'text/plain',
-                        'text/markdown',
-                        'text/csv',
-                        'application/json',
-                    ];
-                    const ext = path.extname(file.originalname).toLowerCase();
-                    const textLikeExts = ['.txt', '.md', '.csv', '.json'];
-
-                    if (textLikeTypes.includes(file.mimetype) || textLikeExts.includes(ext)) {
-                        text = fs.readFileSync(file.path, 'utf8');
-                    } else {
-                        skippedFiles.push({
-                            file: file.originalname,
-                            reason: 'Unsupported file type. Upload PDF/TXT/MD/CSV/JSON only.',
-                        });
-                        continue;
-                    }
-                }
-
-                console.log(`[API/UPLOAD] Extracted text length for ${file.originalname}: ${text?.length || 0}`);
-
-                if (!text || text.trim().length === 0) {
-                    console.warn(`[API/UPLOAD] No text extracted from ${file.originalname}. Is it a scanned PDF?`);
-                    skippedFiles.push({ file: file.originalname, reason: 'No extractable content found' });
-                    continue;
-                }
-            } catch (err) {
-                console.error(`[API/UPLOAD] Extraction failed for ${file.originalname}: ${err.message}`);
-                skippedFiles.push({ file: file.originalname, reason: `Extraction failed: ${err.message}` });
-                continue;
-            }
-
-            // 2. Chunking & Embedding
-            const chunks = text.match(/[\s\S]{1,1500}/g) || [];
-            console.log(`[API/UPLOAD] Chunked into ${chunks.length} parts. Generating embeddings...`);
-
-            const vectors = [];
-            for (let i = 0; i < chunks.length; i++) {
+                // 1. Extraction (PDF + plain text only; OCR/images disabled)
                 try {
-                    const embeddingRes = await azureClient.embeddings.create({
-                        model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
-                        input: chunks[i],
-                    });
+                    if (file.mimetype === 'application/pdf') {
+                        const dataBuffer = fs.readFileSync(file.path);
+                        const pdfData = await pdf(dataBuffer);
+                        text = pdfData.text || '';
+                    } else {
+                        const textLikeTypes = [
+                            'text/plain',
+                            'text/markdown',
+                            'text/csv',
+                            'application/json',
+                        ];
+                        const ext = path.extname(file.originalname).toLowerCase();
+                        const textLikeExts = ['.txt', '.md', '.csv', '.json'];
 
-                    vectors.push({
-                        id: `doc-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 5)}`,
-                        values: embeddingRes.data[0].embedding,
-                        metadata: {
-                            text: chunks[i],
-                            originalName: file.originalname,
-                            type: 'document'
+                        if (textLikeTypes.includes(file.mimetype) || textLikeExts.includes(ext)) {
+                            text = fs.readFileSync(file.path, 'utf8');
+                        } else {
+                            skippedFiles.push({
+                                file: file.originalname,
+                                reason: 'Unsupported file type. Upload PDF/TXT/MD/CSV/JSON only.',
+                            });
+                            continue;
                         }
-                    });
-                } catch (innerErr) {
-                    console.error('[API/UPLOAD] Embedding failed:', innerErr.message);
-                }
-            }
+                    }
 
-            // 3. Upsert via REST (for reliability)
-            if (vectors.length > 0) {
-                const desc = await pc.describeIndex(indexName);
-                const host = desc.host;
-                const upsertUrl = `https://${host}/vectors/upsert`;
+                    console.log(`[API/UPLOAD] Extracted text length for ${file.originalname}: ${text?.length || 0}`);
 
-                const upRes = await fetch(upsertUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Api-Key': process.env.PINECONE_API_KEY,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ vectors })
-                });
-
-                if (upRes.ok) {
-                    console.log(`[API/UPLOAD] Successfully indexed ${vectors.length} vectors for ${file.originalname}`);
-                } else {
-                    const upErr = await upRes.text();
-                    console.error(`[API/UPLOAD] Pinecone REST failed: ${upErr}`);
-                    skippedFiles.push({ file: file.originalname, reason: 'Pinecone upsert failed' });
+                    if (!text || text.trim().length === 0) {
+                        console.warn(`[API/UPLOAD] No text extracted from ${file.originalname}. Is it a scanned PDF?`);
+                        skippedFiles.push({ file: file.originalname, reason: 'No extractable content found' });
+                        continue;
+                    }
+                } catch (err) {
+                    console.error(`[API/UPLOAD] Extraction failed for ${file.originalname}: ${err.message}`);
+                    skippedFiles.push({ file: file.originalname, reason: `Extraction failed: ${err.message}` });
                     continue;
                 }
-            } else {
-                skippedFiles.push({ file: file.originalname, reason: 'No vectors created from extracted content' });
-                continue;
-            }
 
-            // 4. Record in Supabase
-            if (supabase) {
-                console.log(`[SUPABASE] Logging file: ${file.originalname}`);
-                const { data: inserted, error: insertError } = await supabase
-                    .from('files')
-                    .insert([
-                        { user_id: user.id, name: file.originalname, type: file.mimetype, size: file.size, timestamp: new Date() }
-                    ])
-                    .select('*')
-                    .single();
+                // 2. Chunking & Embedding
+                const chunks = text.match(/[\s\S]{1,1500}/g) || [];
+                console.log(`[API/UPLOAD] Chunked into ${chunks.length} parts. Generating embeddings...`);
 
-                if (insertError) {
-                    if (isFilesTableMissing(insertError)) {
-                        console.warn('[SUPABASE] files table missing, using local file index store fallback.');
-                        const fallbackRow = insertIntoLocalFilesStore(file, user.id);
-                        indexedFiles.push(fallbackRow);
+                const vectors = [];
+                for (let i = 0; i < chunks.length; i++) {
+                    try {
+                        const embeddingRes = await azureClient.embeddings.create({
+                            model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
+                            input: chunks[i],
+                        });
+
+                        vectors.push({
+                            id: `doc-${Date.now()}-${i}-${Math.random().toString(36).substr(2, 5)}`,
+                            values: embeddingRes.data[0].embedding,
+                            metadata: {
+                                text: chunks[i],
+                                originalName: file.originalname,
+                                type: 'document'
+                            }
+                        });
+                    } catch (innerErr) {
+                        console.error('[API/UPLOAD] Embedding failed:', innerErr.message);
+                    }
+                }
+
+                // 3. Upsert via REST (for reliability)
+                if (vectors.length > 0) {
+                    const desc = await pc.describeIndex(indexName);
+                    const host = desc.host;
+                    const upsertUrl = `https://${host}/vectors/upsert`;
+
+                    const upRes = await fetch(upsertUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Api-Key': process.env.PINECONE_API_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ vectors })
+                    });
+
+                    if (upRes.ok) {
+                        console.log(`[API/UPLOAD] Successfully indexed ${vectors.length} vectors for ${file.originalname}`);
                     } else {
-                        console.error('[SUPABASE] File log insert failed:', insertError.message);
-                        skippedFiles.push({ file: file.originalname, reason: `Supabase insert failed: ${insertError.message}` });
+                        const upErr = await upRes.text();
+                        console.error(`[API/UPLOAD] Pinecone REST failed: ${upErr}`);
+                        skippedFiles.push({ file: file.originalname, reason: 'Pinecone upsert failed' });
                         continue;
                     }
                 } else {
-                    indexedFiles.push(inserted);
+                    skippedFiles.push({ file: file.originalname, reason: 'No vectors created from extracted content' });
+                    continue;
                 }
-            } else {
-                indexedFiles.push(insertIntoLocalFilesStore(file, user.id));
-            }
+
+                // 4. Record in Supabase
+                if (supabase) {
+                    console.log(`[SUPABASE] Logging file: ${file.originalname}`);
+                    const { data: inserted, error: insertError } = await supabase
+                        .from('files')
+                        .insert([
+                            { user_id: user.id, name: file.originalname, type: file.mimetype, size: file.size, timestamp: new Date() }
+                        ])
+                        .select('*')
+                        .single();
+
+                    if (insertError) {
+                        if (isFilesTableMissing(insertError)) {
+                            console.warn('[SUPABASE] files table missing, using local file index store fallback.');
+                            const fallbackRow = insertIntoLocalFilesStore(file, user.id);
+                            indexedFiles.push(fallbackRow);
+                        } else {
+                            console.error('[SUPABASE] File log insert failed:', insertError.message);
+                            skippedFiles.push({ file: file.originalname, reason: `Supabase insert failed: ${insertError.message}` });
+                            continue;
+                        }
+                    } else {
+                        indexedFiles.push(inserted);
+                    }
+                } else {
+                    indexedFiles.push(insertIntoLocalFilesStore(file, user.id));
+                }
 
             } finally {
                 // Always clean temp upload files, including early-continue paths.
@@ -332,7 +332,7 @@ app.post('/api/chat', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: "You are a 'Topper Friend' student assistant. Use only the provided CONTEXT for uploaded files. Be energetic, precise, and student-friendly."
+                    content: "You are an academic assistant for students. Provide clear, well-structured, and professional responses based solely on the provided CONTEXT from uploaded files. Avoid emojis, maintain formal tone, and focus on educational accuracy."
                 },
                 { role: "user", content: `CONTEXT:\n${context || "EMPTY"}\n\nQUESTION: ${message}` }
             ],
@@ -363,7 +363,7 @@ app.post('/api/chat', async (req, res) => {
                 if (isChatsTableMissing(chatInsertError)) {
                     console.warn('[SUPABASE] chats table missing; chat history persistence is disabled until schema is applied.');
                 } else {
-                console.error('[SUPABASE] Failed to store chat history:', chatInsertError.message);
+                    console.error('[SUPABASE] Failed to store chat history:', chatInsertError.message);
                 }
             }
         }
