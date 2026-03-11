@@ -3,7 +3,7 @@ import { Upload, File, X, CheckCircle2, AlertCircle, Plus, CloudIcon, Fingerprin
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStudyStats } from '../hooks/useStudyStats';
 
-const Vault = ({ compact = false }) => {
+const Vault = ({ compact = false, authToken }) => {
     const [persistedFiles, setPersistedFiles] = useState([]);
     const [uploadingFiles, setUploadingFiles] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
@@ -13,7 +13,8 @@ const Vault = ({ compact = false }) => {
 
     const fetchFiles = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/files');
+            const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+            const res = await fetch('http://localhost:5000/api/files', { headers });
             const data = await res.json();
             setPersistedFiles(data.data || []);
         } catch (err) {
@@ -47,6 +48,7 @@ const Vault = ({ compact = false }) => {
         try {
             const response = await fetch('http://localhost:5000/api/upload', {
                 method: 'POST',
+                headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
                 body: formData
             });
             if (response.ok) {
@@ -70,7 +72,8 @@ const Vault = ({ compact = false }) => {
         if (!window.confirm('NEURAL_PURGE_CONFIRMATION: Permanently remove this intelligence unit and all associated vectors?')) return;
 
         try {
-            const res = await fetch(`http://localhost:5000/api/files/${id}`, { method: 'DELETE' });
+            const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+            const res = await fetch(`http://localhost:5000/api/files/${id}`, { method: 'DELETE', headers });
             if (res.ok) {
                 setPersistedFiles(prev => prev.filter(f => f.id !== id));
             }

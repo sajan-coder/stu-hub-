@@ -136,6 +136,8 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }]);
             window.dispatchEvent(new Event('history-refresh'));
+            // Second refresh after 1.5s to catch DB write latency
+            setTimeout(() => window.dispatchEvent(new Event('history-refresh')), 1500);
         } catch {
             setMessages(prev => [...prev, {
                 role: 'bot',
