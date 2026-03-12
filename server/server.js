@@ -43,6 +43,146 @@ const isChatsTableMissing = (error) =>
 const isSessionIdColumnMissing = (error) =>
     typeof error?.message === 'string' && error.message.toLowerCase().includes('session_id');
 
+const normalizeFlashcardText = (value = '') =>
+    String(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const getWordSet = (value = '') =>
+    new Set(normalizeFlashcardText(value).split(' ').filter(Boolean));
+
+const isWeakFlashcardAnswer = (question = '', answer = '') => {
+    const normalizedQuestion = normalizeFlashcardText(question);
+    const normalizedAnswer = normalizeFlashcardText(answer);
+
+    if (!normalizedQuestion || !normalizedAnswer) return true;
+    if (normalizedQuestion === normalizedAnswer) return true;
+    if ([...normalizedQuestion].reverse().join('') === normalizedAnswer) return true;
+    if (normalizedAnswer.endsWith('?')) return true;
+
+    const questionWords = getWordSet(question);
+    const answerWords = getWordSet(answer);
+    const sharedWords = [...answerWords].filter((word) => questionWords.has(word)).length;
+    const overlapRatio = answerWords.size ? sharedWords / answerWords.size : 1;
+
+    return overlapRatio >= 0.8 && normalizedAnswer.length <= normalizedQuestion.length + 20;
+};
+
+const sanitizeFlashcards = (cards, requestedCount) =>
+    (Array.isArray(cards) ? cards : [])
+        .slice(0, requestedCount)
+        .map((card) => ({
+            question: String(card?.question || card?.q || '').trim(),
+            answer: String(card?.answer || card?.a || '').trim(),
+        }))
+        .filter((card) => card.question && card.answer);
+
+const parseJsonPayload = (raw, fallback) => {
+    if (!raw) return fallback;
+    try {
+        return JSON.parse(raw);
+    } catch {
+        const objectMatch = typeof raw === 'string' ? raw.match(/\{[\s\S]*\}/) : null;
+        if (objectMatch) {
+            try {
+                return JSON.parse(objectMatch[0]);
+            } catch { }
+        }
+        const arrayMatch = typeof raw === 'string' ? raw.match(/\[[\s\S]*\]/) : null;
+        if (arrayMatch) {
+            try {
+                return JSON.parse(arrayMatch[0]);
+            } catch { }
+        }
+        return fallback;
+    }
+};
+
+const sanitizeMcqOption = (option, index) => {
+    const labels = ['A', 'B', 'C', 'D'];
+    const value = String(option || '').replace(/^[A-D][.)\-\s:]*/i, '').trim();
+    return `${labels[index]}. ${value || `Option ${labels[index]}`}`;
+};
+
+const sanitizeMcqs = (mcqs, requestedCount) =>
+    (Array.isArray(mcqs) ? mcqs : [])
+        .slice(0, requestedCount)
+        .map((mcq) => {
+            const rawOptions = Array.isArray(mcq?.options) ? mcq.options.slice(0, 4) : [];
+            while (rawOptions.length < 4) {
+                rawOptions.push(`Option ${String.fromCharCode(65 + rawOptions.length)}`);
+            }
+            const options = rawOptions.map((option, index) => sanitizeMcqOption(option, index));
+            const rawCorrect = String(mcq?.correctAnswer || mcq?.correct || '').trim();
+            const correctIndex = options.findIndex((option) => option === rawCorrect || option.endsWith(rawCorrect.replace(/^[A-D][.)\-\s:]*/i, '').trim()));
+
+            return {
+                question: String(mcq?.question || '').trim(),
+                options,
+                correctAnswer: correctIndex >= 0 ? options[correctIndex] : options[0],
+                explanation: String(mcq?.explanation || mcq?.reason || '').trim(),
+            };
+        })
+        .filter((mcq) => mcq.question && mcq.options.length === 4);
+
+const sanitizeNotesPayload = (payload) => {
+    const notes = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+    const sections = Array.isArray(notes.sections) ? notes.sections : [];
+
+    return {
+        title: String(notes.title || 'Study Notes').trim(),
+        overview: String(notes.overview || notes.summary || notes.content || 'No overview generated.').trim(),
+        sections: sections
+            .map((section) => ({
+                heading: String(section?.heading || section?.title || 'Topic').trim(),
+                summary: String(section?.summary || section?.content || '').trim(),
+                keyPoints: Array.isArray(section?.keyPoints) ? section.keyPoints.map((item) => String(item).trim()).filter(Boolean) : [],
+                examTips: Array.isArray(section?.examTips) ? section.examTips.map((item) => String(item).trim()).filter(Boolean) : [],
+                likelyQuestions: Array.isArray(section?.likelyQuestions) ? section.likelyQuestions.map((item) => String(item).trim()).filter(Boolean) : [],
+            }))
+            .filter((section) => section.heading || section.summary || section.keyPoints.length || section.examTips.length || section.likelyQuestions.length),
+        mustRemember: Array.isArray(notes.mustRemember)
+            ? notes.mustRemember.map((item) => String(item).trim()).filter(Boolean)
+            : [],
+    };
+};
+
+const sanitizeMindMapPayload = (payload) => {
+    const mindmap = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+    const branches = Array.isArray(mindmap.branches)
+        ? mindmap.branches
+        : Array.isArray(mindmap.nodes)
+            ? mindmap.nodes
+                .filter((node) => Number(node?.level) === 1 || !node?.parent)
+                .map((node) => ({
+                    title: String(node?.text || node?.title || 'Branch').trim(),
+                    examAngle: '',
+                    children: Array.isArray(mindmap.nodes)
+                        ? mindmap.nodes
+                            .filter((child) => String(child?.parent || '') === String(node?.id || ''))
+                            .map((child) => String(child?.text || '').trim())
+                            .filter(Boolean)
+                        : [],
+                }))
+            : [];
+
+    return {
+        centralTopic: String(mindmap.centralTopic || mindmap.topic || 'Study Topic').trim(),
+        quickSummary: String(mindmap.quickSummary || mindmap.summary || 'No summary generated.').trim(),
+        branches: branches
+            .map((branch) => ({
+                title: String(branch?.title || branch?.text || 'Branch').trim(),
+                examAngle: String(branch?.examAngle || branch?.summary || '').trim(),
+                children: Array.isArray(branch?.children)
+                    ? branch.children.map((child) => String(child).trim()).filter(Boolean)
+                    : [],
+            }))
+            .filter((branch) => branch.title || branch.children.length),
+    };
+};
+
 app.get('/api/health/supabase', async (_req, res) => {
     if (!supabase) {
         return res.status(500).json({ ok: false, error: 'Supabase client not configured.' });
@@ -377,8 +517,9 @@ app.post('/api/chat', async (req, res) => {
 
 // Flashcard Generation Endpoint
 app.post('/api/flashcards/generate', async (req, res) => {
-    const { fileIds, numCards = 5, count = 5 } = req.body;
-    const actualCount = numCards || count || 5;
+    const { fileIds, numCards, count } = req.body;
+    const requestedCount = Number.parseInt(numCards ?? count, 10);
+    const actualCount = Number.isFinite(requestedCount) && requestedCount > 0 ? requestedCount : 5;
     console.log(`[API/FLASHCARDS] Generating ${actualCount} flashcards from files: ${fileIds?.join(', ')}`);
 
     const user = await ensureAuthenticated(req, res);
@@ -459,7 +600,6 @@ Generate exactly ${actualCount} flashcards covering different topics with real, 
                     content: "Generate study flashcards from the provided material."
                 }
             ],
-            temperature: 0.7,
         });
 
         const reply = completion.choices[0].message.content;
@@ -475,11 +615,54 @@ Generate exactly ${actualCount} flashcards covering different topics with real, 
                 flashcards = JSON.parse(reply);
             }
 
-            // Validate and sanitize
-            flashcards = flashcards.slice(0, actualCount).map(card => ({
-                question: card.question || card.q || "",
-                answer: card.answer || card.a || ""
-            })).filter(card => card.question && card.answer);
+            flashcards = sanitizeFlashcards(flashcards, actualCount);
+
+            const invalidCards = flashcards.filter((card) => isWeakFlashcardAnswer(card.question, card.answer));
+            if (invalidCards.length > 0) {
+                const repairCompletion = await azureClient.chat.completions.create({
+                    model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You repair flashcard answers.
+
+Rules:
+1. Keep each original question exactly as written.
+2. Write a factual answer from the provided context.
+3. Do not restate, invert, or paraphrase the question as the answer.
+4. Each answer must be 1-3 sentences and directly informative.
+5. Return ONLY a JSON array of objects with "question" and "answer".`
+                        },
+                        {
+                            role: "user",
+                            content: `CONTEXT:
+${context.substring(0, 8000)}
+
+FLASHCARDS TO REPAIR:
+${JSON.stringify(invalidCards)}
+
+Return repaired answers for these same questions only.`
+                        }
+                    ],
+                });
+
+                const repairReply = repairCompletion.choices[0].message.content;
+                const repairedMatch = repairReply.match(/\[[\s\S]*\]/);
+                const repairedCards = sanitizeFlashcards(
+                    repairedMatch ? JSON.parse(repairedMatch[0]) : JSON.parse(repairReply),
+                    invalidCards.length
+                );
+                const repairedByQuestion = new Map(
+                    repairedCards.map((card) => [normalizeFlashcardText(card.question), card.answer])
+                );
+
+                flashcards = flashcards.map((card) => {
+                    const repairedAnswer = repairedByQuestion.get(normalizeFlashcardText(card.question));
+                    return repairedAnswer ? { ...card, answer: repairedAnswer } : card;
+                });
+            }
+
+            flashcards = flashcards.filter((card) => !isWeakFlashcardAnswer(card.question, card.answer));
 
         } catch (parseErr) {
             console.error('[API/FLASHCARDS] Parse error:', parseErr.message);
@@ -533,7 +716,14 @@ app.post('/api/notes/generate', async (req, res) => {
             .join("\n---\n");
 
         if (!context || context.trim().length === 0) {
-            return res.json({ data: [{ title: "No Content", content: "No study material found. Please upload files first." }] });
+            return res.json({
+                data: [sanitizeNotesPayload({
+                    title: "No Content",
+                    overview: "No study material found. Please upload files first.",
+                    sections: [],
+                    mustRemember: ["Upload at least one readable study file before generating notes."],
+                })]
+            });
         }
 
         const completion = await azureClient.chat.completions.create({
@@ -541,22 +731,52 @@ app.post('/api/notes/generate', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: `You are an expert tutor. Create comprehensive study notes from the provided material. Generate detailed, well-structured study notes with clear sections. Include key definitions, explanations, and examples. Cover all main topics from the material. Use markdown formatting for headings and lists. Make it easy to review and understand.
+                    content: `You are an exam-prep tutor. Convert the study material into high-value revision notes.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "title": "string",
+  "overview": "2-4 sentence summary",
+  "sections": [
+    {
+      "heading": "string",
+      "summary": "1-2 sentence explanation",
+      "keyPoints": ["point 1", "point 2"],
+      "examTips": ["tip 1", "tip 2"],
+      "likelyQuestions": ["question 1", "question 2"]
+    }
+  ],
+  "mustRemember": ["fact 1", "fact 2"]
+}
+
+Rules:
+1. Focus on exam revision, not generic summarization.
+2. Cover major topics only.
+3. Keep points concise and factual.
+4. Include likely exam questions students can practice.
+5. Do not include markdown fences or commentary.
 
 CONTEXT FROM STUDY MATERIAL:
 ${context.substring(0, 10000)}`
                 },
                 {
                     role: "user",
-                    content: "Create study notes from this material."
+                    content: "Create exam-focused study notes from this material."
                 }
             ],
-            temperature: 0.7,
         });
 
         const reply = completion.choices[0].message.content;
+        const fallbackNotes = {
+            title: "Study Notes",
+            overview: "Key revision notes could not be structured from the material.",
+            sections: [],
+            mustRemember: ["Review the uploaded material directly for important facts."],
+        };
+        const structuredNotes = sanitizeNotesPayload(parseJsonPayload(reply, fallbackNotes));
+
         console.log(`[API/NOTES] Generated study notes`);
-        res.json({ data: [{ title: "Study Notes", content: reply }] });
+        res.json({ data: [structuredNotes] });
 
     } catch (err) {
         console.error('[API/NOTES] ERROR:', err);
@@ -596,7 +816,13 @@ app.post('/api/mindmap/generate', async (req, res) => {
             .join("\n---\n");
 
         if (!context || context.trim().length === 0) {
-            return res.json({ data: [{ centralTopic: "No Content", nodes: [], connections: [] }] });
+            return res.json({
+                data: [sanitizeMindMapPayload({
+                    centralTopic: "No Content",
+                    quickSummary: "No study material found. Please upload files first.",
+                    branches: [],
+                })]
+            });
         }
 
         const completion = await azureClient.chat.completions.create({
@@ -604,28 +830,44 @@ app.post('/api/mindmap/generate', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: `Create a mind map structure from the study material. Output as JSON with: centralTopic (string), nodes (array with id, text, level, parent), connections (array with from, to). Include central topic and 5-8 major branches with 2-4 subtopics each.
+                    content: `Create an exam-oriented mind map from the study material.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "centralTopic": "string",
+  "quickSummary": "1-2 sentence overview",
+  "branches": [
+    {
+      "title": "string",
+      "examAngle": "why this branch matters in exams",
+      "children": ["subtopic 1", "subtopic 2", "subtopic 3"]
+    }
+  ]
+}
+
+Rules:
+1. Include 4-7 major branches.
+2. Each branch must have 2-5 children.
+3. Keep branch titles concise and memorable.
+4. Make the map useful for fast revision.
+5. Do not include markdown fences or extra commentary.
 
 CONTEXT FROM STUDY MATERIAL:
 ${context.substring(0, 8000)}`
                 },
                 {
                     role: "user",
-                    content: "Create a mind map from this material."
+                    content: "Create a revision mind map from this material."
                 }
             ],
-            temperature: 0.7,
         });
 
         const reply = completion.choices[0].message.content;
-        let mindmap = { centralTopic: "Study Topic", nodes: [], connections: [] };
-
-        try {
-            const jsonMatch = reply.match(/\{[\s\S]*\}/);
-            if (jsonMatch) mindmap = JSON.parse(jsonMatch[0]);
-        } catch (parseErr) {
-            console.error('[API/MINDMAP] Parse error:', parseErr.message);
-        }
+        const mindmap = sanitizeMindMapPayload(parseJsonPayload(reply, {
+            centralTopic: "Study Topic",
+            quickSummary: "No structured mind map could be generated.",
+            branches: [],
+        }));
 
         console.log(`[API/MINDMAP] Generated mind map`);
         res.json({ data: [mindmap] });
@@ -668,7 +910,19 @@ app.post('/api/mcq/generate', async (req, res) => {
             .join("\n---\n");
 
         if (!context || context.trim().length === 0) {
-            return res.json({ data: [] });
+            return res.json({
+                data: [{
+                    question: "No study material found. What should you do first?",
+                    options: [
+                        "A. Upload at least one readable file",
+                        "B. Refresh the page only",
+                        "C. Delete the workspace",
+                        "D. Change browser zoom"
+                    ],
+                    correctAnswer: "A. Upload at least one readable file",
+                    explanation: "MCQs need uploaded study material before they can be generated.",
+                }]
+            });
         }
 
         const completion = await azureClient.chat.completions.create({
@@ -676,37 +930,44 @@ app.post('/api/mcq/generate', async (req, res) => {
             messages: [
                 {
                     role: "system",
-                    content: `Generate ${numQuestions} MCQs from the study material. Each question has: question, options (array of 4), correctAnswer (one of the options). Cover different topics. Make options plausible.
+                    content: `Generate exactly ${numQuestions} exam-style MCQs from the study material.
 
-OUTPUT FORMAT (JSON array):
+Return ONLY a valid JSON array in this shape:
 [
-  { "question": "What is...?", "options": ["A)", "B)", "C)", "D)"], "correctAnswer": "A)" }
+  {
+    "question": "string",
+    "options": ["A. option", "B. option", "C. option", "D. option"],
+    "correctAnswer": "A. option",
+    "explanation": "short reason why the correct option is right"
+  }
 ]
+
+Rules:
+1. Every question must have exactly 4 options.
+2. Only one option can be correct.
+3. Wrong options must be plausible.
+4. Cover different topics from the material.
+5. Do not include markdown fences or extra commentary.
 
 CONTEXT:
 ${context.substring(0, 8000)}`
                 },
                 {
                     role: "user",
-                    content: "Generate MCQ quiz."
+                    content: "Generate an exam practice MCQ quiz."
                 }
             ],
-            temperature: 0.7,
         });
 
         const reply = completion.choices[0].message.content;
-        let mcqs = [];
-        try {
-            const jsonMatch = reply.match(/\[[\s\S]*\]/);
-            if (jsonMatch) mcqs = JSON.parse(jsonMatch[0]);
-            mcqs = mcqs.slice(0, numQuestions).map(mcq => ({
-                question: mcq.question || "",
-                options: mcq.options || ["A", "B", "C", "D"],
-                correctAnswer: mcq.correctAnswer || mcq.correct || mcq.options?.[0] || ""
-            })).filter(mcq => mcq.question && mcq.options?.length >= 2);
-        } catch (parseErr) {
-            console.error('[API/MCQ] Parse error:', parseErr.message);
-            mcqs = [{ question: "Sample question?", options: ["A", "B", "C", "D"], correctAnswer: "A" }];
+        let mcqs = sanitizeMcqs(parseJsonPayload(reply, []), numQuestions);
+        if (mcqs.length === 0) {
+            mcqs = [{
+                question: "Sample question?",
+                options: ["A. Option A", "B. Option B", "C. Option C", "D. Option D"],
+                correctAnswer: "A. Option A",
+                explanation: "Fallback example because quiz generation failed."
+            }];
         }
 
         console.log(`[API/MCQ] Generated ${mcqs.length} MCQs`);
