@@ -99,21 +99,21 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
     };
 
     return (
-        <div className="flex flex-col h-full font-inter">
+        <div className="flex flex-col h-full font-handwritten">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-[#F1F1F0] flex items-center justify-center text-[#1A1A1A]">
-                        <History size={14} strokeWidth={2.5} />
+                    <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center text-black border-2 border-gray-300">
+                        <History size={16} strokeWidth={2.5} />
                     </div>
-                    <h3 className="text-[11px] font-black text-[#1A1A1A] uppercase tracking-[0.2em]">Neural Logs</h3>
+                    <h3 className="text-xs font-bold text-ink uppercase tracking-[0.15em]">📝 Chat History</h3>
                 </div>
                 <button
                     onClick={clearAllHistory}
-                    className="p-1.5 hover:bg-red-50 hover:text-red-500 rounded-lg text-[#DCDCDA] transition-all"
+                    className="p-2 hover:bg-red-100 hover:text-red-500 rounded-lg text-gray-400 transition-all"
                     title="Clear All Logs"
                 >
-                    <Trash2 size={13} />
+                    <Trash2 size={14} />
                 </button>
             </div>
 
@@ -121,23 +121,23 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
             <motion.button
                 whileTap={{ scale: 0.97 }}
                 onClick={() => onNewSession?.()}
-                className="w-full flex items-center gap-3 p-3.5 mb-6 rounded-xl bg-[#111111] text-white hover:bg-[#222] transition-all shadow-lg active:scale-[0.98]"
+                className="w-full flex items-center gap-3 p-4 mb-6 rounded-xl bg-yellow-200 text-black hover:bg-yellow-300 transition-all shadow-cutout active:scale-[0.98] border-2 border-gray-400 transform rotate-0.5"
             >
-                <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center">
-                    <Plus size={14} strokeWidth={3} />
+                <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center">
+                    <Plus size={16} strokeWidth={3} />
                 </div>
-                <span className="text-[12px] font-bold uppercase tracking-widest">New Session</span>
+                <span className="text-sm font-bold uppercase tracking-widest">+ New Chat</span>
             </motion.button>
 
             {/* Search */}
             <div className="relative mb-6">
-                <Search size={13} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#BBBBB9]" />
+                <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                     type="text"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search past chats..."
-                    className="w-full bg-[#F9F9F8] border border-[#F1F1F0] rounded-xl py-2.5 pl-10 pr-4 text-[12px] font-medium outline-none focus:border-[#DCDCDA] focus:bg-white transition-all placeholder:text-[#C0C0BE]"
+                    className="w-full bg-white border-2 border-gray-200 rounded-xl py-3 pl-10 pr-4 text-sm font-handwritten outline-none focus:border-yellow-400 focus:bg-yellow-50 transition-all placeholder:text-gray-400"
                 />
             </div>
 
@@ -145,29 +145,29 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
             <div className="flex-1 overflow-y-auto space-y-1 custom-scrollbar -mr-2 pr-2">
                 {isLoading ? (
                     <div className="py-16 flex flex-col items-center gap-3">
-                        <Loader size={18} className="animate-spin text-[#DCDCDA]" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#C0C0BE]">Syncing Logs...</span>
+                        <Loader size={20} className="animate-spin text-gray-400" />
+                        <span className="text-xs font-bold uppercase tracking-widest text-gray-400">📡 Syncing...</span>
                     </div>
                 ) : Object.keys(groupedSessions).length === 0 ? (
                     <div className="py-16 text-center px-4">
-                        <div className="w-10 h-10 rounded-xl bg-[#F1F1F0] flex items-center justify-center mx-auto mb-4">
-                            <MessageSquare size={18} className="text-[#DCDCDA]" />
+                        <div className="w-14 h-14 rounded-xl bg-yellow-50 flex items-center justify-center mx-auto mb-4 border-2 border-gray-200">
+                            <MessageSquare size={20} className="text-gray-400" />
                         </div>
-                        <p className="text-[11px] font-semibold text-[#C0C0BE] leading-relaxed">
-                            No stored conversations yet.
+                        <p className="text-sm font-semibold text-faded leading-relaxed">
+                            No conversations yet! ✏️
                         </p>
-                        <p className="text-[10px] text-[#DCDCDA] mt-1">Start a new session to begin.</p>
+                        <p className="text-xs text-gray-400 mt-1">Start a new chat to begin.</p>
                     </div>
                 ) : (
                     <AnimatePresence initial={false}>
                         {Object.entries(groupedSessions).map(([dateLabel, group]) => (
                             <div key={dateLabel} className="mb-4">
                                 {/* Date Group Label */}
-                                <div className="px-1 mb-2 flex items-center gap-2">
-                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[#BBBBB9]">
+                                <div className="px-1 mb-3 flex items-center gap-2">
+                                    <span className="text-xs font-bold uppercase tracking-[0.15em] text-gray-500 bg-yellow-50 px-2 py-0.5 rounded transform rotate-1">
                                         {dateLabel}
                                     </span>
-                                    <div className="flex-1 h-px bg-[#F1F1F0]" />
+                                    <div className="flex-1 h-px bg-gray-200" />
                                 </div>
 
                                 {/* Session Items */}
@@ -182,8 +182,8 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
                                                 exit={{ opacity: 0, x: -10 }}
                                                 transition={{ duration: 0.15 }}
                                                 className={`group flex items-start gap-2.5 p-3 rounded-xl cursor-pointer transition-all duration-200 ${isActive
-                                                        ? 'bg-[#111111] text-white shadow-lg'
-                                                        : 'text-[#1A1A1A] hover:bg-[#F5F5F4]'
+                                                    ? 'bg-[#111111] text-white shadow-lg'
+                                                    : 'text-[#1A1A1A] hover:bg-[#F5F5F4]'
                                                     }`}
                                                 onClick={() => onSelectSession?.(session.session_id)}
                                             >
@@ -209,8 +209,8 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
                                                 <button
                                                     onClick={(e) => deleteSession(e, session.session_id)}
                                                     className={`shrink-0 w-5 h-5 rounded-md flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 ${isActive
-                                                            ? 'text-white/50 hover:text-white hover:bg-white/10'
-                                                            : 'text-[#DCDCDA] hover:text-red-500 hover:bg-red-50'
+                                                        ? 'text-white/50 hover:text-white hover:bg-white/10'
+                                                        : 'text-[#DCDCDA] hover:text-red-500 hover:bg-red-50'
                                                         }`}
                                                     title="Delete session"
                                                 >

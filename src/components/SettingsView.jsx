@@ -73,47 +73,47 @@ const SettingsView = ({ user, onAuthChanged }) => {
     };
 
     return (
-        <div className="ml-[72px] min-h-screen bg-[#F8F8F7] px-16 py-16 font-inter">
+        <div className="ml-[72px] min-h-screen notebook-surface px-16 py-16 font-handwritten">
             <div className="max-w-2xl">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#F1F1F0] border border-[#E8E8E7] mb-6">
-                    <Shield size={14} />
-                    <span className="text-[11px] font-black uppercase tracking-widest">Auth Settings</span>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-yellow-100 border-2 border-gray-300 mb-6 cutout shadow-sm">
+                    <Shield size={16} />
+                    <span className="text-xs font-bold uppercase tracking-widest">⚙️ Settings</span>
                 </div>
-                <h1 className="text-[30px] font-semibold mb-4 text-[#111111]">Account Access</h1>
-                <p className="text-[#6B6B6A] mb-8">Create account, login/logout, and isolate chats per user email.</p>
+                <h1 className="text-4xl font-title mb-4 text-gray-800" style={{ fontFamily: 'Changa One, cursive' }}>👤 Account Access</h1>
+                <p className="text-gray-600 mb-8 font-handwritten text-lg">Sign in to sync your doodles across devices! 📝</p>
 
-                <div className="rounded-2xl border border-[#E8E8E7] bg-white p-6 space-y-4">
+                <div className="rounded-2xl border-2 border-gray-300 bg-yellow-50 p-6 space-y-4 cutout shadow-md">
                     <div className="grid grid-cols-1 gap-3">
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Email"
-                            className="h-11 px-4 rounded-xl border border-[#E8E8E7] outline-none focus:border-[#DCDCDA]"
+                            placeholder="📧 Email"
+                            className="h-12 px-4 rounded-xl border-2 border-gray-300 outline-none focus:border-yellow-400 bg-white font-handwritten"
                         />
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Password"
-                            className="h-11 px-4 rounded-xl border border-[#E8E8E7] outline-none focus:border-[#DCDCDA]"
+                            placeholder="🔒 Password"
+                            className="h-12 px-4 rounded-xl border-2 border-gray-300 outline-none focus:border-yellow-400 bg-white font-handwritten"
                         />
                     </div>
 
-                    <div className="flex gap-3">
-                        <button onClick={handleSignUp} disabled={busy} className="h-10 px-4 rounded-xl bg-black text-white text-[12px] font-bold flex items-center gap-2 disabled:opacity-50">
+                    <div className="flex gap-3 flex-wrap">
+                        <button onClick={handleSignUp} disabled={busy} className="h-10 px-4 rounded-xl bg-green-300 text-gray-800 text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-green-400 transition-colors cutout border-2 border-gray-400">
                             <UserPlus size={14} /> Create User
                         </button>
-                        <button onClick={handleSignIn} disabled={busy} className="h-10 px-4 rounded-xl border border-[#E8E8E7] text-[12px] font-bold flex items-center gap-2 disabled:opacity-50">
+                        <button onClick={handleSignIn} disabled={busy} className="h-10 px-4 rounded-xl bg-blue-300 text-gray-800 text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-blue-400 transition-colors cutout border-2 border-gray-400">
                             <LogIn size={14} /> Login
                         </button>
-                        <button onClick={handleSignOut} disabled={busy} className="h-10 px-4 rounded-xl border border-[#E8E8E7] text-[12px] font-bold flex items-center gap-2 disabled:opacity-50">
+                        <button onClick={handleSignOut} disabled={busy} className="h-10 px-4 rounded-xl bg-red-200 text-gray-800 text-sm font-bold flex items-center gap-2 disabled:opacity-50 hover:bg-red-300 transition-colors cutout border-2 border-gray-400">
                             <LogOut size={14} /> Logout
                         </button>
                     </div>
 
                     <div className="flex gap-3">
-                        <button onClick={handleGoogleSignIn} disabled={busy} className="h-10 px-4 w-full rounded-xl border border-[#E8E8E7] text-[12px] font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-[#F1F1F0] transition-colors">
+                        <button onClick={handleGoogleSignIn} disabled={busy} className="h-10 px-4 w-full rounded-xl border-2 border-gray-300 text-sm font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-gray-100 transition-colors bg-white">
                             <svg className="w-4 h-4" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -124,19 +124,19 @@ const SettingsView = ({ user, onAuthChanged }) => {
                         </button>
                     </div>
 
-                    <div className="rounded-xl border border-[#F1F1F0] bg-[#FCFCFB] p-4 text-[13px]">
-                        <div className="font-bold mb-1 flex items-center gap-2"><User size={13} /> Current User</div>
+                    <div className="rounded-xl border-2 border-gray-300 bg-blue-50 p-4 text-sm">
+                        <div className="font-bold mb-1 flex items-center gap-2"><User size={14} /> 👤 Current User</div>
                         {user ? (
-                            <div className="space-y-1 text-[#4B4B4A]">
-                                <p>Email: {user.email}</p>
-                                <p>ID: {user.id}</p>
+                            <div className="space-y-1 text-gray-600">
+                                <p>📧 Email: {user.email}</p>
+                                <p>🆔 ID: {user.id.slice(0, 8)}...</p>
                             </div>
                         ) : (
-                            <p className="text-[#A1A1A0]">Not logged in</p>
+                            <p className="text-gray-400">Not logged in 🤔</p>
                         )}
                     </div>
 
-                    {status && <p className="text-[12px] text-[#5F5F5E]">{status}</p>}
+                    {status && <p className="text-sm text-gray-600 bg-yellow-100 p-2 rounded-lg border-2 border-gray-300">{status}</p>}
                 </div>
             </div>
         </div>

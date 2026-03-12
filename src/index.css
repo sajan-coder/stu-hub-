@@ -5,29 +5,28 @@
 @tailwind utilities;
 
 :root {
-  /* Scholar "Quiet Luxury" Palette */
-  --bg-app: #F8F8F7;
-  /* Warm, sophisticated off-white to reduce starkness */
-  --bg-sidebar: #FFFFFF;
-  --bg-surface: #FFFFFF;
-  --bg-subtle: #F1F1F0;
+  /* Notebook Paper Theme */
+  --bg-paper: #fdfdfd;
+  --bg-paper-cream: #faf8f0;
+  --lines-color: #e8e4dc;
+  --margin-line: rgba(255, 100, 100, 0.25);
 
-  --accent-academic: #F2E27D;
-  /* Softened Academic Yellow */
-  --text-primary: #1A1A1A;
-  --text-secondary: #5F5F5E;
-  --text-tertiary: #A1A1A0;
+  /* Doodle Accent Colors */
+  --marker-red: #ff6b6b;
+  --marker-blue: #4ecdc4;
+  --marker-yellow: #ffe66d;
+  --marker-green: #95e1a3;
+  --marker-purple: #a29bfe;
+  --marker-orange: #f8b739;
 
-  --border-subtle: #E8E8E7;
-  --border-strong: #DCDCDA;
+  /* Text colors for notebook feel */
+  --text-ink: #2c3e50;
+  --text-pencil: #4a4a4a;
+  --text-faded: #7f8c8d;
 
-  --radius-xl: 14px;
-  --radius-lg: 10px;
-  --radius-md: 8px;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.04);
+  /* Shadow for cutout effect */
+  --shadow-cutout: 3px 5px 3px rgba(0, 0, 0, 0.15);
+  --shadow-cutout-hover: 5px 8px 6px rgba(0, 0, 0, 0.2);
 }
 
 * {
@@ -40,83 +39,359 @@
 
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: var(--bg-app);
-  color: var(--text-primary);
-  /* Refined typography settings for "Premium SaaS" feel */
+  /* Notebook paper background */
+  background-color: var(--bg-paper);
+  background-image:
+    linear-gradient(rgba(180, 180, 255, 0.1) 2px, transparent 2px),
+    linear-gradient(90deg, transparent 99px, var(--margin-line) 99px, var(--margin-line) 101px, transparent 101px);
+  background-size: 100% 36px, 100% 100%;
+  background-attachment: local;
+  color: var(--text-ink);
   letter-spacing: -0.015em;
   line-height: 1.5;
+  min-height: 100vh;
 }
 
+/* Handwritten font for headings */
 h1,
 h2,
 h3,
-h4 {
+h4,
+h5,
+h6 {
+  font-family: 'Patrick Hand', 'Comic Neue', cursive;
   font-weight: 600;
-  letter-spacing: -0.025em;
-  color: #000000;
+  color: var(--text-ink);
+  letter-spacing: 0;
 }
 
-/* ── Scholar Surface System ── */
-.scholar-surface {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+/* ── Cutout Card Effect ── */
+.cutout {
+  filter: drop-shadow(3px 5px 3px rgba(0, 0, 0, 0.15));
+  transition: transform 0.2s ease-in-out, filter 0.2s ease-in-out;
+  background: white;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+}
+
+.cutout:hover {
+  transform: scale(1.02) translateY(-3px) rotate(1deg);
+  filter: drop-shadow(4px 6px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* ── Notebook Surface System ── */
+.notebook-surface {
+  background: white;
+  border: 2px solid #ccc;
+  border-radius: 3px;
+  box-shadow: var(--shadow-cutout);
   transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  /* Slightly rotated for hand-placed feel */
+  transform: rotate(-0.5deg);
 }
 
-.scholar-surface:hover {
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
+.notebook-surface:hover {
+  box-shadow: var(--shadow-cutout-hover);
+  transform: scale(1.01) rotate(0deg);
 }
 
-.scholar-btn-primary {
-  background: var(--text-primary);
-  color: #FFFFFF;
-  font-weight: 500;
-  padding: 10px 18px;
-  border-radius: var(--radius-lg);
-  font-size: 13.5px;
+/* ── Doodle Button Styles ── */
+.doodle-btn {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.1rem;
+  padding: 8px 20px;
+  border: 2px solid #333;
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+  background: white;
+  color: #333;
+  cursor: pointer;
   transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
-.scholar-btn-primary:hover {
-  background: #000000;
-  transform: translateY(-1px);
+.doodle-btn:hover {
+  transform: translateY(-2px) rotate(-1deg);
+  box-shadow: 3px 5px 0 rgba(0, 0, 0, 0.15);
+  background: #fff9e6;
 }
 
-.scholar-badge {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
+.doodle-btn:active {
+  transform: translateY(0);
+  box-shadow: 1px 2px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* ── Custom Scrollbar ── */
+/* Primary doodle button with marker color */
+.doodle-btn-primary {
+  background: var(--marker-yellow);
+  border-color: #333;
+  font-weight: 600;
+}
+
+.doodle-btn-primary:hover {
+  background: var(--marker-orange);
+}
+
+/* ── Sticky Note Effect ── */
+.sticky-note {
+  background: #fff9c4;
+  padding: 16px;
+  border-radius: 2px;
+  box-shadow: 2px 3px 6px rgba(0, 0, 0, 0.15);
+  transform: rotate(-1deg);
+  transition: transform 0.2s ease;
+  font-family: 'Caveat', cursive;
+  font-size: 1.2rem;
+}
+
+.sticky-note:hover {
+  transform: rotate(0deg) scale(1.02);
+}
+
+.sticky-note.pink {
+  background: #f8bbd0;
+}
+
+.sticky-note.green {
+  background: #c8e6c9;
+}
+
+.sticky-note.blue {
+  background: #bbdefb;
+}
+
+.sticky-note.orange {
+  background: #ffe0b2;
+}
+
+/* ── Marker Highlighter Effect ── */
+.highlight {
+  background: linear-gradient(180deg, transparent 60%, rgba(255, 230, 109, 0.5) 60%);
+  padding: 0 2px;
+}
+
+.highlight-blue {
+  background: linear-gradient(180deg, transparent 60%, rgba(78, 205, 196, 0.4) 60%);
+}
+
+.highlight-green {
+  background: linear-gradient(180deg, transparent 60%, rgba(149, 225, 163, 0.4) 60%);
+}
+
+.highlight-pink {
+  background: linear-gradient(180deg, transparent 60%, rgba(255, 183, 178, 0.4) 60%);
+}
+
+/* ── Input Fields with Notebook Feel ── */
+.notebook-input {
+  font-family: 'Patrick Hand', cursive;
+  font-size: 1.1rem;
+  padding: 10px 14px;
+  border: 2px solid #999;
+  border-radius: 3px;
+  background: white;
+  color: #333;
+  transition: all 0.2s ease;
+}
+
+.notebook-input:focus {
+  outline: none;
+  border-color: var(--marker-blue);
+  box-shadow: 2px 2px 0 var(--marker-blue);
+  transform: translateX(2px);
+}
+
+.notebook-input::placeholder {
+  color: #aaa;
+  font-style: italic;
+}
+
+/* ── Handwritten/Title Text ── */
+.font-handwritten {
+  font-family: 'Patrick Hand', cursive;
+}
+
+.font-caveat {
+  font-family: 'Caveat', cursive;
+}
+
+.font-title-doodle {
+  font-family: 'Changa One', cursive;
+}
+
+/* ── Floating Animation Elements ── */
+.floating {
+  animation: float 4s ease-in-out infinite;
+}
+
+.bobbing {
+  animation: bob 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+@keyframes bob {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(8px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+/* ── Sidebar Notebook Style ── */
+.sidebar-notebook {
+  background: var(--bg-paper-cream);
+  border-right: 3px solid #ccc;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+/* ── Cards Container with Notebook Feel ── */
+.card-stack {
+  position: relative;
+}
+
+.card-stack>*:nth-child(1) {
+  transform: rotate(-2deg);
+}
+
+.card-stack>*:nth-child(2) {
+  transform: rotate(1deg);
+}
+
+.card-stack>*:nth-child(3) {
+  transform: rotate(-1deg);
+}
+
+/* ── Selection Color ── */
+::selection {
+  background: rgba(255, 230, 109, 0.5);
+  color: #333;
+}
+
+/* ── Custom Scrollbar (thicker, marker-like) ── */
 ::-webkit-scrollbar {
-  width: 5px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f0f0f0;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #E0E0DF;
-  border-radius: 10px;
+  background: linear-gradient(180deg, #ccc, #aaa);
+  border-radius: 5px;
+  border: 2px solid #f0f0f0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #D1D1D0;
+  background: linear-gradient(180deg, #bbb, #999);
 }
 
-.selection\:bg-accent {
-  --tw-selection-bg: rgba(242, 226, 125, 0.4);
+/* ── Badge Styles (like colored stickers) ── */
+.sticker-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-family: 'Patrick Hand', cursive;
+  font-size: 0.95rem;
+  border-radius: 3px;
+  transform: rotate(-2deg);
+  box-shadow: 1px 2px 2px rgba(0, 0, 0, 0.1);
+}
+
+.sticker-badge.red {
+  background: var(--marker-red);
+  color: white;
+}
+
+.sticker-badge.blue {
+  background: var(--marker-blue);
+  color: white;
+}
+
+.sticker-badge.green {
+  background: var(--marker-green);
+  color: #333;
+}
+
+.sticker-badge.yellow {
+  background: var(--marker-yellow);
+  color: #333;
+}
+
+.sticker-badge.purple {
+  background: var(--marker-purple);
+  color: white;
+}
+
+.sticker-badge.orange {
+  background: var(--marker-orange);
+  color: white;
+}
+
+/* ── Washi Tape Effect ── */
+.washi-tape {
+  position: relative;
+}
+
+.washi-tape::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 60px;
+  height: 20px;
+  background: rgba(255, 183, 178, 0.7);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* ── Paper Clip Decoration ── */
+.paper-clip {
+  position: relative;
+}
+
+.paper-clip::after {
+  content: '📎';
+  position: absolute;
+  top: -15px;
+  right: 10px;
+  font-size: 1.5rem;
+  transform: rotate(15deg);
+  filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+/* ── Underline Effect (like pencil) ── */
+.pencil-underline {
+  border-bottom: 2px solid #999;
+  padding-bottom: 2px;
+}
+
+.pencil-underline.red {
+  border-bottom-color: var(--marker-red);
+}
+
+.pencil-underline.blue {
+  border-bottom-color: var(--marker-blue);
+}
+
+.pencil-underline.green {
+  border-bottom-color: var(--marker-green);
 }

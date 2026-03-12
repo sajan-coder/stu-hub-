@@ -375,6 +375,349 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
+// Flashcard Generation Endpoint
+app.post('/api/flashcards/generate', async (req, res) => {
+    const { fileIds, numCards = 5, count = 5 } = req.body;
+    const actualCount = numCards || count || 5;
+    console.log(`[API/FLASHCARDS] Generating ${actualCount} flashcards from files: ${fileIds?.join(', ')}`);
+
+    const user = await ensureAuthenticated(req, res);
+    if (!user) return;
+
+    if (!azureClient || !pc) {
+        return res.status(500).json({ error: "CONFIG ERROR. Azure or Pinecone not configured." });
+    }
+
+    try {
+        const indexName = process.env.PINECONE_INDEX_NAME || 'student-hub-index';
+        const index = pc.index(indexName);
+
+        // Get all vectors from the index for context
+        // Since we can't easily filter by fileIds without storing file metadata,
+        // we'll query for diverse content
+        const queryEmbedding = await azureClient.embeddings.create({
+            model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
+            input: "study notes summary concepts definitions key points",
+        });
+
+        // Query Pinecone for relevant content
+        const queryResponse = await index.query({
+            vector: queryEmbedding.data[0].embedding,
+            topK: actualCount * 3, // Get more content to generate multiple cards
+            includeMetadata: true,
+        });
+
+        const context = queryResponse.matches
+            .map(match => match.metadata.text)
+            .join("\n---\n");
+
+        if (!context || context.trim().length === 0) {
+            return res.json({ data: [] });
+        }
+
+        // Generate flashcards using Azure OpenAI
+        const completion = await azureClient.chat.completions.create({
+            model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert educator specializing in creating study flashcards. 
+
+TASK: Generate ${actualCount} high-quality flashcards from the provided study material.
+
+IMPORTANT REQUIREMENTS:
+1. Each flashcard MUST have a DIFFERENT question and a DIFFERENT answer
+2. The answer must provide ACTUAL information from the material, NOT just restate or invert the question
+3. Answers should be informative, substantive, and different from the question
+4. Each flashcard must have:
+   - "question": A clear, specific question testing understanding
+   - "answer": A concise, accurate answer with real information
+5. Cover DIFFERENT topics from the material (not just one topic)
+6. Questions should test comprehension, definition, application, or analysis
+7. Answers should be brief but complete (1-3 sentences max)
+8. Use diverse question types: definitions, true/false, fill-in-blank, concept explanations
+9. Format as JSON array with question/answer pairs
+
+EXAMPLE OUTPUT FORMAT:
+[
+  { "question": "What is photosynthesis?", "answer": "Photosynthesis is the process by which plants convert light energy into chemical energy, producing glucose and oxygen from carbon dioxide and water." },
+  { "question": "Define cell membrane.", "answer": "The cell membrane is a phospholipid bilayer that surrounds the cell, controlling the passage of substances in and out of the cell." }
+]
+
+BAD EXAMPLE (DO NOT USE):
+[
+  { "question": "What is photosynthesis?", "answer": "What photosynthesis is." }  // BAD - just inverts the question
+]
+
+CONTEXT FROM STUDY MATERIAL:
+${context.substring(0, 8000)}
+
+Generate exactly ${actualCount} flashcards covering different topics with real, informative answers. Return ONLY valid JSON array.`
+                },
+                {
+                    role: "user",
+                    content: "Generate study flashcards from the provided material."
+                }
+            ],
+            temperature: 0.7,
+        });
+
+        const reply = completion.choices[0].message.content;
+
+        // Parse the JSON response
+        let flashcards = [];
+        try {
+            // Try to extract JSON from the response (it might have markdown code blocks)
+            const jsonMatch = reply.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+                flashcards = JSON.parse(jsonMatch[0]);
+            } else {
+                flashcards = JSON.parse(reply);
+            }
+
+            // Validate and sanitize
+            flashcards = flashcards.slice(0, actualCount).map(card => ({
+                question: card.question || card.q || "",
+                answer: card.answer || card.a || ""
+            })).filter(card => card.question && card.answer);
+
+        } catch (parseErr) {
+            console.error('[API/FLASHCARDS] Parse error:', parseErr.message);
+            console.log('[API/FLASHCARDS] Raw response:', reply);
+            // Return fallback flashcards
+            flashcards = [
+                { question: "What is the main topic covered in these materials?", answer: "Review the uploaded documents to find the key concepts." },
+                { question: "Define the key term from your study material.", answer: "Refer to the documents for definitions." },
+                { question: "What are the main concepts?", answer: "Check the uploaded files for detailed explanations." }
+            ];
+        }
+
+        console.log(`[API/FLASHCARDS] Generated ${flashcards.length} flashcards`);
+        res.json({ data: flashcards });
+
+    } catch (err) {
+        console.error('[API/FLASHCARDS] ERROR:', err);
+        res.status(500).json({ error: 'Failed to generate flashcards.' });
+    }
+});
+
+// Study Notes Generation Endpoint
+app.post('/api/notes/generate', async (req, res) => {
+    const { fileIds } = req.body;
+    console.log(`[API/NOTES] Generating study notes from files: ${fileIds?.join(', ')}`);
+
+    const user = await ensureAuthenticated(req, res);
+    if (!user) return;
+
+    if (!azureClient || !pc) {
+        return res.status(500).json({ error: "CONFIG ERROR. Azure or Pinecone not configured." });
+    }
+
+    try {
+        const indexName = process.env.PINECONE_INDEX_NAME || 'student-hub-index';
+        const index = pc.index(indexName);
+
+        const queryEmbedding = await azureClient.embeddings.create({
+            model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
+            input: "main topics concepts summary detailed explanation",
+        });
+
+        const queryResponse = await index.query({
+            vector: queryEmbedding.data[0].embedding,
+            topK: 20,
+            includeMetadata: true,
+        });
+
+        const context = queryResponse.matches
+            .map(match => match.metadata.text)
+            .join("\n---\n");
+
+        if (!context || context.trim().length === 0) {
+            return res.json({ data: [{ title: "No Content", content: "No study material found. Please upload files first." }] });
+        }
+
+        const completion = await azureClient.chat.completions.create({
+            model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert tutor. Create comprehensive study notes from the provided material. Generate detailed, well-structured study notes with clear sections. Include key definitions, explanations, and examples. Cover all main topics from the material. Use markdown formatting for headings and lists. Make it easy to review and understand.
+
+CONTEXT FROM STUDY MATERIAL:
+${context.substring(0, 10000)}`
+                },
+                {
+                    role: "user",
+                    content: "Create study notes from this material."
+                }
+            ],
+            temperature: 0.7,
+        });
+
+        const reply = completion.choices[0].message.content;
+        console.log(`[API/NOTES] Generated study notes`);
+        res.json({ data: [{ title: "Study Notes", content: reply }] });
+
+    } catch (err) {
+        console.error('[API/NOTES] ERROR:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Mind Map Generation Endpoint
+app.post('/api/mindmap/generate', async (req, res) => {
+    const { fileIds } = req.body;
+    console.log(`[API/MINDMAP] Generating mind map from files: ${fileIds?.join(', ')}`);
+
+    const user = await ensureAuthenticated(req, res);
+    if (!user) return;
+
+    if (!azureClient || !pc) {
+        return res.status(500).json({ error: "CONFIG ERROR. Azure or Pinecone not configured." });
+    }
+
+    try {
+        const indexName = process.env.PINECONE_INDEX_NAME || 'student-hub-index';
+        const index = pc.index(indexName);
+
+        const queryEmbedding = await azureClient.embeddings.create({
+            model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
+            input: "main concepts topics relationships ideas",
+        });
+
+        const queryResponse = await index.query({
+            vector: queryEmbedding.data[0].embedding,
+            topK: 15,
+            includeMetadata: true,
+        });
+
+        const context = queryResponse.matches
+            .map(match => match.metadata.text)
+            .join("\n---\n");
+
+        if (!context || context.trim().length === 0) {
+            return res.json({ data: [{ centralTopic: "No Content", nodes: [], connections: [] }] });
+        }
+
+        const completion = await azureClient.chat.completions.create({
+            model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+            messages: [
+                {
+                    role: "system",
+                    content: `Create a mind map structure from the study material. Output as JSON with: centralTopic (string), nodes (array with id, text, level, parent), connections (array with from, to). Include central topic and 5-8 major branches with 2-4 subtopics each.
+
+CONTEXT FROM STUDY MATERIAL:
+${context.substring(0, 8000)}`
+                },
+                {
+                    role: "user",
+                    content: "Create a mind map from this material."
+                }
+            ],
+            temperature: 0.7,
+        });
+
+        const reply = completion.choices[0].message.content;
+        let mindmap = { centralTopic: "Study Topic", nodes: [], connections: [] };
+
+        try {
+            const jsonMatch = reply.match(/\{[\s\S]*\}/);
+            if (jsonMatch) mindmap = JSON.parse(jsonMatch[0]);
+        } catch (parseErr) {
+            console.error('[API/MINDMAP] Parse error:', parseErr.message);
+        }
+
+        console.log(`[API/MINDMAP] Generated mind map`);
+        res.json({ data: [mindmap] });
+
+    } catch (err) {
+        console.error('[API/MINDMAP] ERROR:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// MCQ Generation Endpoint
+app.post('/api/mcq/generate', async (req, res) => {
+    const { fileIds, numQuestions = 5 } = req.body;
+    console.log(`[API/MCQ] Generating ${numQuestions} MCQs from files: ${fileIds?.join(', ')}`);
+
+    const user = await ensureAuthenticated(req, res);
+    if (!user) return;
+
+    if (!azureClient || !pc) {
+        return res.status(500).json({ error: "CONFIG ERROR. Azure or Pinecone not configured." });
+    }
+
+    try {
+        const indexName = process.env.PINECONE_INDEX_NAME || 'student-hub-index';
+        const index = pc.index(indexName);
+
+        const queryEmbedding = await azureClient.embeddings.create({
+            model: process.env.AZURE_OPENAI_EMBEDDINGS_DEPLOYMENT.trim(),
+            input: "concepts definitions facts key points quiz questions",
+        });
+
+        const queryResponse = await index.query({
+            vector: queryEmbedding.data[0].embedding,
+            topK: numQuestions * 3,
+            includeMetadata: true,
+        });
+
+        const context = queryResponse.matches
+            .map(match => match.metadata.text)
+            .join("\n---\n");
+
+        if (!context || context.trim().length === 0) {
+            return res.json({ data: [] });
+        }
+
+        const completion = await azureClient.chat.completions.create({
+            model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+            messages: [
+                {
+                    role: "system",
+                    content: `Generate ${numQuestions} MCQs from the study material. Each question has: question, options (array of 4), correctAnswer (one of the options). Cover different topics. Make options plausible.
+
+OUTPUT FORMAT (JSON array):
+[
+  { "question": "What is...?", "options": ["A)", "B)", "C)", "D)"], "correctAnswer": "A)" }
+]
+
+CONTEXT:
+${context.substring(0, 8000)}`
+                },
+                {
+                    role: "user",
+                    content: "Generate MCQ quiz."
+                }
+            ],
+            temperature: 0.7,
+        });
+
+        const reply = completion.choices[0].message.content;
+        let mcqs = [];
+        try {
+            const jsonMatch = reply.match(/\[[\s\S]*\]/);
+            if (jsonMatch) mcqs = JSON.parse(jsonMatch[0]);
+            mcqs = mcqs.slice(0, numQuestions).map(mcq => ({
+                question: mcq.question || "",
+                options: mcq.options || ["A", "B", "C", "D"],
+                correctAnswer: mcq.correctAnswer || mcq.correct || mcq.options?.[0] || ""
+            })).filter(mcq => mcq.question && mcq.options?.length >= 2);
+        } catch (parseErr) {
+            console.error('[API/MCQ] Parse error:', parseErr.message);
+            mcqs = [{ question: "Sample question?", options: ["A", "B", "C", "D"], correctAnswer: "A" }];
+        }
+
+        console.log(`[API/MCQ] Generated ${mcqs.length} MCQs`);
+        res.json({ data: mcqs });
+
+    } catch (err) {
+        console.error('[API/MCQ] ERROR:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 3. Chat History Endpoints
 app.get('/api/history', async (req, res) => {
     if (!supabase) return res.json({ data: [] });

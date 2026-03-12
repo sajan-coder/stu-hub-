@@ -29,31 +29,31 @@ const NotesView = () => {
     );
 
     return (
-        <div className="flex-1 ml-[72px] bg-[#F8F8F7] min-h-screen py-20 px-24 font-inter">
+        <div className="flex-1 ml-[72px] min-h-screen notebook-surface py-20 px-24 font-handwritten">
             <header className="flex justify-between items-end mb-16 max-w-6xl mx-auto">
                 <div>
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="w-1 h-3 bg-[#111111] rounded-full" />
-                        <span className="text-[10px] font-bold text-[#A1A1A0] uppercase tracking-[0.2em]">Repository / Neural_Synthesis</span>
+                        <div className="w-1 h-3 bg-yellow-500 rounded-full" />
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest">📝 My Notes</span>
                     </div>
-                    <h1 className="text-[40px] font-semibold tracking-tight text-[#1A1A1A] leading-tight">
-                        Knowledge Vault.
+                    <h1 className="text-5xl font-title text-gray-800 leading-tight" style={{ fontFamily: 'Changa One, cursive' }}>
+                        📓 My Notebook
                     </h1>
                 </div>
 
                 <div className="flex items-center gap-4">
                     <div className="relative group">
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#A1A1A0] group-focus-within:text-black transition-colors" />
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-gray-600 transition-colors" />
                         <input
                             type="text"
-                            placeholder="Filter partitions..."
+                            placeholder="Search notes..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-11 pl-11 pr-6 bg-white border border-[#E8E8E7] rounded-xl text-[13px] font-medium outline-none focus:border-[#111111] transition-all w-64 shadow-sm"
+                            className="h-11 pl-11 pr-6 bg-yellow-50 border-2 border-gray-300 rounded-xl text-sm font-medium outline-none focus:border-yellow-400 transition-all w-64 cutout shadow-sm"
                         />
                     </div>
-                    <button className="h-11 px-6 bg-black text-white rounded-xl font-semibold text-[13px] flex items-center gap-2 hover:translate-y-[-1px] transition-all shadow-xl">
-                        <Plus size={14} strokeWidth={2.5} /> New Note
+                    <button className="h-11 px-6 bg-yellow-300 text-gray-800 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-yellow-400 transition-all cutout shadow-md border-2 border-gray-400">
+                        <Plus size={14} strokeWidth={2.5} /> 📝 New Note
                     </button>
                 </div>
             </header>
@@ -66,26 +66,27 @@ const NotesView = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05 }}
-                            className="bg-white border border-[#E8E8E7] rounded-2xl p-8 hover:shadow-xl hover:border-[#DCDCDA] transition-all group flex flex-col h-[320px]"
+                            className="bg-yellow-50 border-2 border-gray-300 rounded-2xl p-6 hover:shadow-lg hover:border-yellow-300 transition-all group flex flex-col h-[280px] cutout"
+                            style={{ transform: `rotate(${Math.random() * 4 - 2}deg)` }}
                         >
-                            <div className="flex items-center justify-between mb-6">
-                                <div className="p-2.5 bg-[#FBFBFA] border border-[#F1F1F0] rounded-lg text-[#1A1A1A]">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-2 bg-pink-200 border-2 border-gray-400 rounded-lg text-gray-700">
                                     <StickyNote size={18} />
                                 </div>
-                                <span className="text-[10px] font-black text-[#DCDCDA] uppercase tracking-widest">{new Date(note.timestamp).toLocaleDateString()}</span>
+                                <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">{new Date(note.timestamp).toLocaleDateString()}</span>
                             </div>
 
-                            <h3 className="text-[17px] font-bold text-[#1A1A1A] mb-3 group-hover:text-black transition-colors">{note.title}</h3>
-                            <p className="text-[14px] leading-relaxed text-[#A1A1A0] font-medium line-clamp-5 mb-auto">
+                            <h3 className="text-lg font-bold text-gray-800 mb-2 group-hover:text-black transition-colors" style={{ fontFamily: 'Patrick Hand, cursive' }}>{note.title}</h3>
+                            <p className="text-sm leading-relaxed text-gray-600 font-handwritten line-clamp-5 mb-auto">
                                 {note.content}
                             </p>
 
-                            <div className="mt-8 pt-6 border-t border-[#F1F1F0] flex items-center justify-between">
-                                <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#FBFBFA] border border-[#F1F1F0]">
-                                    <Hash size={10} className="text-[#A1A1A0]" />
-                                    <span className="text-[9px] font-bold text-[#5F5F5E] uppercase tracking-widest">{note.subject || 'Research'}</span>
+                            <div className="mt-4 pt-4 border-t-2 border-dashed border-gray-300 flex items-center justify-between">
+                                <div className="flex items-center gap-2 px-2 py-1 rounded bg-blue-100 border-2 border-gray-300">
+                                    <Hash size={10} className="text-gray-500" />
+                                    <span className="text-xs font-bold text-gray-600 uppercase tracking-widest">{note.subject || 'General'}</span>
                                 </div>
-                                <button className="text-[#DCDCDA] hover:text-[#1A1A1A] transition-colors">
+                                <button className="text-gray-400 hover:text-gray-700 transition-colors">
                                     <ChevronRight size={18} />
                                 </button>
                             </div>
@@ -95,11 +96,11 @@ const NotesView = () => {
 
                 {filteredNotes.length === 0 && !loading && (
                     <div className="col-span-full py-32 text-center">
-                        <div className="w-16 h-16 bg-white border border-[#E8E8E7] rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-                            <Hash size={24} className="text-[#DCDCDA]" />
+                        <div className="w-16 h-16 bg-yellow-50 border-2 border-gray-300 rounded-2xl flex items-center justify-center mx-auto mb-6 cutout shadow-sm">
+                            <Hash size={24} className="text-gray-400" />
                         </div>
-                        <h4 className="text-[15px] font-bold text-[#1A1A1A] mb-2 uppercase tracking-widest">No matching nodes</h4>
-                        <p className="text-[13px] font-medium text-[#A1A1A0]">Your filter query did not return any serialized notes.</p>
+                        <h4 className="text-lg font-bold text-gray-700 mb-2 uppercase tracking-widest" style={{ fontFamily: 'Changa One, cursive' }}>No Notes Yet! 📝</h4>
+                        <p className="text-sm font-handwritten text-gray-500">Start doodling your thoughts...</p>
                     </div>
                 )}
             </div>

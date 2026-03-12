@@ -136,7 +136,6 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             }]);
             window.dispatchEvent(new Event('history-refresh'));
-            // Second refresh after 1.5s to catch DB write latency
             setTimeout(() => window.dispatchEvent(new Event('history-refresh')), 1500);
         } catch {
             setMessages(prev => [...prev, {
@@ -171,7 +170,6 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }]);
 
-                // Refresh the Vault component in the sidebar
                 window.dispatchEvent(new Event('vault-refresh'));
                 fetchIndexedFiles();
             } else {
@@ -199,7 +197,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
     };
 
     const handleNewChat = () => {
-        if (window.confirm('Initialize new session? Current active buffers will be cleared.')) {
+        if (window.confirm('Start a new conversation? 🆕')) {
             setMessages([]);
             setInput('');
             setCurrentSessionId(null);
@@ -211,7 +209,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             setMessages([]);
             return;
         }
-        if (window.confirm('Delete this current chat session from history?')) {
+        if (window.confirm('🗑️ Delete this chat history?')) {
             try {
                 const res = await fetch(`http://localhost:5000/api/history?session_id=${encodeURIComponent(currentSessionId)}`, {
                     method: 'DELETE',
@@ -235,10 +233,10 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 headers: authToken
                     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }
                     : { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content, title: 'AI Synthesis' })
+                body: JSON.stringify({ content, title: 'AI Chat Note' })
             });
             if (res.ok) {
-                alert('Note saved to Neural Vault.');
+                alert('📝 Note saved!');
             }
         } catch (err) {
             console.error('Failed to save note:', err);
@@ -248,35 +246,35 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
     const handleSend = () => handleSendText(input);
 
     return (
-        <div className="h-full flex flex-col bg-white border-l border-[#E8E8E7] font-inter">
+        <div className="h-full flex flex-col bg-yellow-50 border-l-2 border-gray-300 font-handwritten">
             {/* ── HEADER ── */}
-            <div className="px-10 py-6 border-b border-[#F1F1F0] flex items-center justify-between shrink-0 glass z-40">
+            <div className="px-8 py-5 border-b-2 border-gray-200 flex items-center justify-between shrink-0 bg-yellow-100">
                 <div className="flex items-center gap-4">
-                    <div className="w-9 h-9 border border-[#E8E8E7] rounded-xl flex items-center justify-center text-[#1A1A1A] bg-[#FBFBFA] shadow-sm">
-                        <Command size={16} strokeWidth={2.5} />
+                    <div className="w-10 h-10 border-2 border-gray-300 rounded-xl flex items-center justify-center text-gray-700 bg-white shadow-sm">
+                        <Command size={18} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h3 className="text-[14px] font-bold text-[#1A1A1A] leading-tight flex items-center gap-2">
-                            Study_Core
-                            <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] font-black text-[#A1A1A0] uppercase tracking-widest bg-[#F1F1F0] px-1.5 py-0.5 rounded leading-none">v3.02.0</span>
+                        <h3 className="text-base font-bold text-gray-800 leading-tight flex items-center gap-2" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                            📚 Study Buddy
+                            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest bg-white px-2 py-0.5 rounded">v1.0</span>
                         </h3>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-8">
-                    <div className="flex gap-6 items-center">
+                <div className="flex items-center gap-6">
+                    <div className="flex gap-4 items-center">
                         <div className="flex flex-col items-center">
-                            <span className="text-[9px] font-bold text-[#A1A1A0] uppercase tracking-widest mb-1 leading-none">History</span>
-                            <span className="text-[11px] font-bold text-[#5F5F5E] tabular-nums flex items-center gap-1.5">
-                                <Clock size={10} className="text-blue-500" /> Synced
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">History</span>
+                            <span className="text-sm font-bold text-gray-600 flex items-center gap-1.5">
+                                <Clock size={12} className="text-blue-400" /> ✓ Synced
                             </span>
                         </div>
-                        <div className="h-6 w-px bg-[#F1F1F0]" />
+                        <div className="h-8 w-px bg-gray-200" />
                         <div className="flex flex-col items-center">
-                            <span className="text-[9px] font-bold text-[#A1A1A0] uppercase tracking-widest mb-1 leading-none">Status</span>
-                            <div className="flex items-center gap-2 text-[11px] font-black text-[#5F5F5E] uppercase tracking-tighter">
-                                <Activity size={10} className="text-green-500" /> Optimal
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">Status</span>
+                            <div className="flex items-center gap-2 text-sm font-bold text-gray-600 uppercase">
+                                <Activity size={12} className="text-green-400" /> Ready!
                             </div>
                         </div>
                     </div>
@@ -284,24 +282,24 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             </div>
 
             {/* ── CHAT SPACE ── */}
-            <div className="px-10 py-4 border-b border-[#F1F1F0] bg-[#FCFCFB] shrink-0">
+            <div className="px-8 py-3 border-b-2 border-gray-200 bg-yellow-100 shrink-0">
                 <div className="max-w-4xl mx-auto">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#A1A1A0]">Indexed Files</span>
-                        <span className="text-[10px] font-bold text-[#5F5F5E]">{indexedFiles.length} files</span>
+                        <span className="text-xs font-bold uppercase tracking-widest text-gray-500">📁 Indexed Files</span>
+                        <span className="text-xs font-bold text-gray-500">{indexedFiles.length} files</span>
                     </div>
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-2 overflow-x-auto">
                         {indexedFiles.length === 0 && (
-                            <div className="text-[12px] text-[#A1A1A0] py-1">No files indexed yet.</div>
+                            <div className="text-sm text-gray-400 py-1">No files yet... 📭</div>
                         )}
                         {indexedFiles.map((file) => (
-                            <div key={file.id} className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border border-[#E8E8E7] bg-white">
-                                <File size={12} className="text-[#A1A1A0]" />
-                                <span className="text-[11px] font-semibold text-[#1A1A1A] max-w-[260px] truncate">{file.name}</span>
+                            <div key={file.id} className="shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-gray-200 bg-white">
+                                <File size={12} className="text-gray-400" />
+                                <span className="text-xs font-bold text-gray-700 max-w-[200px] truncate">{file.name}</span>
                                 <button
                                     onClick={() => removeIndexedFile(file.id)}
-                                    className="w-5 h-5 rounded flex items-center justify-center text-[#A1A1A0] hover:text-red-600 hover:bg-red-50 transition-colors"
-                                    title="Remove indexed file"
+                                    className="w-5 h-5 rounded flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                    title="Remove"
                                 >
                                     <X size={12} />
                                 </button>
@@ -311,15 +309,18 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-16 py-16 space-y-16 bg-[#FFFFFF] custom-scrollbar selection:bg-[#F2E27D]/40 relative">
+            <div className="flex-1 overflow-y-auto px-12 py-10 space-y-10 bg-white relative" style={{
+                backgroundImage: 'linear-gradient(rgba(200, 200, 255, 0.1) 1px, transparent 1px)',
+                backgroundSize: '100% 24px'
+            }}>
                 {messages.length === 0 && !isLoading && (
-                    <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-24 animate-fade-in relative z-10">
-                        <div className="w-16 h-16 rounded-[24px] bg-[#FBFBFA] border border-[#F1F1F0] flex items-center justify-center shadow-sm mb-10 group hover:rotate-6 transition-all duration-300">
-                            <Monitor size={24} className="text-[#DCDCDA] group-hover:text-black transition-colors" />
+                    <div className="h-full flex flex-col items-center justify-center text-center max-w-lg mx-auto py-20 animate-fade-in relative z-10">
+                        <div className="w-16 h-16 rounded-2xl bg-yellow-50 border-2 border-gray-200 flex items-center justify-center shadow-sm mb-8 group hover:rotate-6 transition-all duration-300">
+                            <Monitor size={28} className="text-gray-400 group-hover:text-gray-600 transition-colors" />
                         </div>
                         <div>
-                            <h4 className="text-[18px] font-semibold text-[#1A1A1A] mb-3 tracking-tight">System initialized and ready.</h4>
-                            <p className="text-[15px] font-medium text-[#A1A1A0] leading-relaxed">Neural core is synchronized with your knowledge vault and partitioned history.</p>
+                            <h4 className="text-2xl font-bold text-gray-700 mb-3" style={{ fontFamily: 'Patrick Hand, cursive' }}>👋 Hey there!</h4>
+                            <p className="text-base text-gray-500 leading-relaxed font-handwritten">Ask me anything about your study materials! 📚<br />I can help you learn, summarize, and remember.</p>
                         </div>
                     </div>
                 )}
@@ -328,32 +329,31 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                     {messages.map((msg, index) => (
                         <div
                             key={index}
-                            className={`flex gap-8 max-w-4xl mx-auto items-start font-inter group ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                            className={`flex gap-6 max-w-4xl mx-auto items-start font-handwritten ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                         >
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border transition-all duration-300 ${msg.role === 'user' ? 'bg-[#111111] text-white border-black shadow-lg shadow-black/10' : 'bg-white text-[#A1A1A0] border-[#F1F1F0] hover:border-[#DCDCDA]'
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border-2 transition-all duration-300 ${msg.role === 'user' ? 'bg-yellow-300 text-gray-800 border-gray-300 shadow-md' : 'bg-white text-gray-500 border-gray-200 hover:border-yellow-300'
                                 }`}>
-                                {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                                {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
                             </div>
-                            <div className={`flex flex-col gap-4 flex-1 ${msg.role === 'user' ? 'items-end' : ''}`}>
-                                <div className={`selection:bg-[#F2E27D]/40 ${msg.role === 'user' ? 'text-[#1A1A1A] font-semibold' : ''
-                                    }`}>
+                            <div className={`flex flex-col gap-2 flex-1 ${msg.role === 'user' ? 'items-end' : ''}`}>
+                                <div className={`${msg.role === 'user' ? 'text-gray-800 font-bold' : ''}`}>
                                     {msg.role === 'user' ? (
-                                        <p className="text-[16px] leading-[1.6] tracking-tight">{msg.content}</p>
+                                        <p className="text-base leading-relaxed">{msg.content}</p>
                                     ) : (
                                         <div
-                                            className="ai-response ai-content text-[15.5px] leading-[1.6] tracking-tight text-[#1A1A1A]"
+                                            className="ai-response ai-content text-base leading-relaxed text-gray-700 bg-yellow-50 p-4 rounded-xl border-2 border-gray-200"
                                             dangerouslySetInnerHTML={{ __html: formatAIResponse(msg.content) }}
                                         />
                                     )}
                                 </div>
-                                <div className={`flex items-center gap-4 mt-2 transition-opacity ${msg.role === 'bot' ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'}`}>
-                                    <span className="text-[9px] font-black text-[#DCDCDA] uppercase tracking-[0.2em]">{msg.time} // {msg.role === 'user' ? 'SCHOLAR_LOCAL' : 'CORE_NEURAL'}</span>
+                                <div className={`flex items-center gap-3 mt-1 transition-opacity ${msg.role === 'bot' ? 'opacity-0 group-hover:opacity-100' : 'opacity-0'}`}>
+                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{msg.time}</span>
                                     {msg.role === 'bot' && (
                                         <button
                                             onClick={() => createNoteFromMsg(msg.content)}
-                                            className="flex items-center gap-1.5 text-[10px] font-bold text-[#A1A1A0] hover:text-black transition-colors"
+                                            className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-yellow-500 transition-colors"
                                         >
-                                            <Save size={10} /> Save to Vault
+                                            <Save size={12} /> Save 📝
                                         </button>
                                     )}
                                 </div>
@@ -361,14 +361,14 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                         </div>
                     ))}
                     {isLoading && (
-                        <div className="flex gap-8 max-w-4xl mx-auto">
-                            <div className="w-9 h-9 rounded-xl bg-black flex items-center justify-center text-white border border-black shadow-lg shadow-black/10">
-                                <Bot size={16} className="animate-pulse" />
+                        <div className="flex gap-6 max-w-4xl mx-auto">
+                            <div className="w-10 h-10 rounded-xl bg-yellow-300 flex items-center justify-center text-gray-800 border-2 border-gray-300 shadow-md">
+                                <Bot size={18} className="animate-pulse" />
                             </div>
-                            <div className="flex gap-2 items-center pl-2">
-                                <div className="w-1.5 h-1.5 bg-[#F2E27D] rounded-full animate-bounce [animation-delay:-0.3s]" />
-                                <div className="w-1.5 h-1.5 bg-[#F2E27D] rounded-full animate-bounce [animation-delay:-0.15s]" />
-                                <div className="w-1.5 h-1.5 bg-[#F2E27D] rounded-full animate-bounce" />
+                            <div className="flex gap-2 items-center pl-2 pt-2">
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" />
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                             </div>
                         </div>
                     )}
@@ -377,33 +377,31 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             </div>
 
             {/* ── INTERFACE INPUT ── */}
-            <div className="px-16 py-10 bg-[#FFFFFF] border-t border-[#F1F1F0] glass z-50">
-                <div className="relative max-w-4xl mx-auto flex flex-col gap-4">
+            <div className="px-12 py-6 bg-yellow-50 border-t-2 border-gray-200 z-50">
+                <div className="relative max-w-4xl mx-auto flex flex-col gap-3">
                     {/* Control Bar */}
-                    <div className="flex items-center gap-3 px-1">
+                    <div className="flex items-center gap-2 px-1">
                         <button
                             onClick={handleNewChat}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-[#A1A1A0] hover:text-black hover:bg-[#F1F1F0] transition-all"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-gray-800 hover:bg-yellow-100 transition-all"
                         >
-                            <Plus size={12} strokeWidth={3} /> New Chat
+                            <Plus size={14} strokeWidth={3} /> 🆕 New Chat
                         </button>
-                        <div className="w-px h-3 bg-[#E8E8E7]" />
+                        <div className="w-px h-4 bg-gray-200" />
                         <button
                             onClick={handleDeleteHistory}
-                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest text-[#A1A1A0] hover:text-red-600 hover:bg-red-50 transition-all"
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-red-500 hover:bg-red-50 transition-all"
                         >
-                            <Trash2 size={12} /> Clear History
+                            <Trash2 size={14} /> Clear
                         </button>
                     </div>
 
-                    <div className="flex items-end gap-2 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#E8E8E7] rounded-2xl p-2.5 focus-within:border-[#DCDCDA] transition-all">
-                        {/* Unified Upload Action */}
+                    <div className="flex items-end gap-2 bg-white shadow-md border-2 border-gray-200 rounded-2xl p-2 focus-within:border-yellow-300 transition-all">
                         <div className="flex items-center gap-1.5">
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                title="Upload PDF / TXT / MD / CSV / JSON"
-                                className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-all ${isUploading ? 'bg-black text-white animate-pulse' : 'bg-[#FBFBFA] text-[#A1A1A0] hover:text-black hover:bg-[#F1F1F0]'
-                                    }`}
+                                title="Upload files"
+                                className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-all ${isUploading ? 'bg-yellow-300 text-gray-800 animate-pulse' : 'bg-yellow-50 text-gray-500 hover:text-gray-800 hover:bg-yellow-100 border-2 border-gray-200'}`}
                             >
                                 <Upload size={18} />
                             </button>
@@ -426,14 +424,14 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                                     handleSend();
                                 }
                             }}
-                            placeholder="Ask questions or upload study documents..."
+                            placeholder="Type your question here... ✏️"
                             rows={1}
-                            className="flex-1 bg-transparent px-2 py-3 text-[14.5px] font-medium text-[#1A1A1A] placeholder-[#A1A1A0] outline-none resize-none min-h-[48px] custom-scrollbar"
+                            className="flex-1 bg-transparent px-3 py-3 text-base font-handwritten text-gray-800 placeholder-gray-400 outline-none resize-none min-h-[48px]"
                         />
                         <button
                             onClick={handleSend}
                             disabled={isLoading || !input.trim()}
-                            className="w-11 h-11 bg-black text-white rounded-xl flex items-center justify-center shadow-lg hover:translate-y-[-1px] active:scale-95 transition-all disabled:opacity-20"
+                            className="w-11 h-11 bg-yellow-300 text-gray-800 rounded-xl flex items-center justify-center shadow-md hover:bg-yellow-400 hover:translate-y-[-1px] active:scale-95 transition-all disabled:opacity-30 border-2 border-gray-300"
                         >
                             <Send size={18} strokeWidth={2.5} />
                         </button>

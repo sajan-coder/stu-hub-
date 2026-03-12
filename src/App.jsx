@@ -3,7 +3,7 @@ import { Cpu, Zap } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import MainOverview from './components/MainOverview';
 import ChatTerminal from './components/ChatTerminal';
-import NotesView from './components/NotesView';
+import SmartNotes from './components/SmartNotes';
 import ChatHistory from './components/ChatHistory';
 import SettingsView from './components/SettingsView';
 import { supabase } from './lib/supabaseClient';
@@ -14,18 +14,18 @@ const AssistantTab = ({ user, authToken }) => {
 
   if (!user || !authToken) {
     return (
-      <div className="ml-[72px] h-screen flex items-center justify-center bg-[#F8F8F7] font-inter">
-        <div className="max-w-md text-center">
-          <h2 className="text-[28px] font-semibold text-[#111111] mb-3">Login Required</h2>
-          <p className="text-[#6B6B6A]">Open Settings, sign in, and your chats/files will be separated by your email account.</p>
+      <div className="ml-[72px] h-screen flex items-center justify-center bg-paper-cream font-handwritten">
+        <div className="max-w-md text-center cutout p-8">
+          <h2 className="text-3xl font-title-doodle text-ink mb-4">⚠️ Login Required</h2>
+          <p className="text-lg text-faded font-handwritten">Open Settings, sign in, and your chats/files will be separated by your email account.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-[#F8F8F7] overflow-hidden ml-[72px] font-inter">
-      <aside className="w-[440px] h-full overflow-y-auto px-12 py-12 border-r border-[#E8E8E7] bg-[#FFFFFF] flex flex-col gap-12 custom-scrollbar shadow-inner shadow-black/5 z-10">
+    <div className="flex h-screen overflow-hidden ml-[72px] font-handwritten">
+      <aside className="w-[440px] h-full overflow-y-auto px-12 py-12 border-r-2 border-gray-300 bg-paper-cream flex flex-col gap-12 custom-scrollbar z-10 cutout">
         <div className="flex-1 space-y-12">
           <ChatHistory
             authToken={authToken}
@@ -38,19 +38,18 @@ const AssistantTab = ({ user, authToken }) => {
           />
         </div>
 
-        <div className="mt-auto p-1 px-8 rounded-2xl bg-[#111111] text-white relative overflow-hidden group border-b-4 border-black">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16" />
-          <p className="text-[9px] font-black uppercase text-[#F2E27D] tracking-widest mb-3 flex items-center gap-2">
-            <Zap size={10} fill="currentColor" /> Research performance
+        <div className="mt-auto p-4 px-6 rounded-lg bg-yellow-100 relative overflow-hidden group border-2 border-gray-400 transform rotate-1">
+          <p className="text-xs font-bold uppercase text-red-500 tracking-widest mb-2 flex items-center gap-2">
+            📝 Study Log
           </p>
-          <p className="text-[12px] font-medium leading-relaxed opacity-60 mb-6 font-inter">Advanced vector indexing activated for high-context paper analysis.</p>
-          <button className="w-full py-2.5 border border-white/20 hover:border-white hover:bg-white hover:text-black rounded-[8px] transition-all text-[11px] font-bold uppercase tracking-widest">
-            Access Pro
+          <p className="text-sm leading-relaxed text-faded mb-4 font-handwritten">Track your learning progress with doodles!</p>
+          <button className="w-full py-2 border-2 border-gray-500 hover:border-black hover:bg-yellow-200 rounded-md transition-all text-sm font-bold font-handwritten">
+            Start Writing 📝
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 bg-white relative">
+      <main className="flex-1 bg-white relative cutout">
         <ChatTerminal authToken={authToken} selectedSessionId={activeSessionId} newSessionToken={newSessionToken} />
       </main>
     </div>
@@ -84,7 +83,7 @@ const App = () => {
   }, []);
 
   return (
-    <div className="flex bg-[#F8F8F7] min-h-screen selection:bg-[#F2E27D]/40 font-inter">
+    <div className="flex min-h-screen selection:bg-yellow-200 font-handwritten">
       <Sidebar activeTab={activeTab} onNavigate={setActiveTab} />
 
       <main className="flex-1 w-full relative">
@@ -99,30 +98,29 @@ const App = () => {
         }>
           {activeTab === 'dashboard' && <MainOverview onNavigate={setActiveTab} />}
           {activeTab === 'assistant' && <AssistantTab user={user} authToken={authToken} />}
-          {activeTab === 'notes' && <NotesView />}
+          {activeTab === 'notes' && <SmartNotes authToken={authToken} />}
           {activeTab === 'settings' && <SettingsView user={user} onAuthChanged={syncAuth} />}
           {['planner', 'career', 'tools'].includes(activeTab) && (
-            <div className="ml-[72px] h-screen flex flex-col items-center justify-center text-center px-24 bg-[#F8F8F7] font-inter">
-              <div className="w-16 h-16 bg-white border border-[#E8E8E7] rounded-xl flex items-center justify-center mb-10 shadow-sm">
-                <Cpu size={26} className="text-[#DCDCDA]" strokeWidth={1.5} />
+            <div className="ml-[72px] h-screen flex flex-col items-center justify-center text-center px-24 bg-paper-cream font-handwritten">
+              <div className="w-20 h-20 bg-yellow-100 border-2 border-gray-300 rounded-2xl flex items-center justify-center mb-8 floating">
+                <Cpu size={32} className="text-gray-600" />
               </div>
               <div className="max-w-md">
-                <h1 className="text-[28px] font-semibold tracking-tight text-[#111111] mb-4 uppercase">
-                  Initializing {activeTab.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                <h1 className="text-4xl font-title-doodle tracking-tight text-ink mb-6 uppercase transform -rotate-1">
+                  📍 {activeTab.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
                 </h1>
                 <div className="flex items-center justify-center gap-3 mb-6">
-                  <div className="px-2 py-1 rounded bg-[#F1F1F0] text-[10px] font-bold text-[#A1A1A0] uppercase tracking-widest">Neural_Core v3.1</div>
-                  <div className="px-2 py-1 rounded bg-[#F1F1F0] text-[10px] font-bold text-[#A1A1A0] uppercase tracking-widest">Allocating Cycles</div>
+                  <div className="px-3 py-1 rounded bg-yellow-100 text-xs font-bold text-gray-600 uppercase tracking-widest transform rotate-2">Coming Soon!</div>
                 </div>
-                <p className="text-[#A1A1A0] font-medium leading-relaxed text-[15px]">
-                  Optimizing partitioning for your specific study profile. The OS is allocating local compute cycles for high-density analysis.
+                <p className="text-lg text-faded font-handwritten leading-relaxed">
+                  🎨 This section is being decorated with doodles! Check back soon for more fun features.
                 </p>
               </div>
               <button
                 onClick={() => setActiveTab('dashboard')}
-                className="mt-14 h-11 px-10 bg-black text-white rounded-[11px] font-semibold text-[13px] hover:translate-y-[-1px] transition-all shadow-xl hover:shadow-black/5 active:scale-95"
+                className="mt-10 h-12 px-12 bg-yellow-200 text-black rounded-xl font-bold text-lg hover:bg-yellow-300 transition-all shadow-cutout hover:shadow-cutout-hover transform hover:-translate-y-1 rotate-1"
               >
-                Return to Workspace
+                ← Back to Notebook
               </button>
             </div>
           )}

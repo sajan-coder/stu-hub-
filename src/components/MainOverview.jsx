@@ -84,86 +84,87 @@ const MainOverview = ({ onNavigate }) => {
         <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex-1 ml-[72px] bg-[#F8F8F7] min-h-screen py-20 px-24 font-inter selection:bg-[#F2E27D]/40"
+            className="flex-1 ml-[72px] bg-paper-cream min-h-screen py-16 px-20 font-handwritten selection:bg-yellow-200"
         >
             {/* ── HEADER ── */}
-            <header className="flex justify-between items-start mb-24 max-w-7xl mx-auto">
+            <header className="flex justify-between items-start mb-16 max-w-7xl mx-auto">
                 <div>
                     <div className="flex items-center gap-3 mb-4">
-                        <div className="w-1 h-3 bg-[#111111] rounded-full" />
-                        <span className="text-[10px] font-bold text-[#A1A1A0] uppercase tracking-[0.2em]">{dateStr} / OPERATION_SCHOLAR</span>
+                        <div className="w-2 h-4 bg-red-400 rounded-full" />
+                        <span className="text-xs font-bold text-faded uppercase tracking-[0.2em] transform rotate-1">{dateStr} 📅</span>
                     </div>
-                    <h1 className="text-[40px] font-semibold tracking-tight text-[#1A1A1A] leading-[1.1] max-w-xl">
-                        Welcome to your workstation, Scholar.
+                    <h1 className="text-4xl font-title-doodle tracking-tight text-ink leading-[1.1] max-w-xl transform -rotate-1">
+                        Welcome to your <span className="text-yellow-500">📓 Student Hub</span>!
                     </h1>
+                    <p className="mt-3 text-lg text-faded font-handwritten">Let's make today productive! ✨</p>
                 </div>
 
                 <button
                     onClick={isSessionRunning ? stopSession : startSession}
-                    className={`h-11 px-8 rounded-[11px] font-semibold text-[13px] transition-all duration-300 flex items-center gap-3 active:scale-95 border-b-2 ${isSessionRunning
-                        ? 'bg-[#111111] text-white border-black hover:opacity-90'
-                        : 'bg-[#FFFFFF] text-[#1A1A1A] border-[#DCDCDA] hover:bg-[#F1F1F0] shadow-sm'
+                    className={`h-12 px-8 rounded-xl font-bold text-base transition-all duration-300 flex items-center gap-3 border-2 ${isSessionRunning
+                        ? 'bg-red-100 text-red-600 border-red-300 hover:bg-red-200'
+                        : 'bg-yellow-100 text-black border-gray-300 hover:bg-yellow-200 shadow-cutout hover:shadow-cutout-hover transform hover:-translate-y-1'
                         }`}
                 >
-                    {isSessionRunning ? <Square size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" strokeWidth={0} />}
-                    {isSessionRunning ? 'End Session' : 'Start Focus Session'}
+                    {isSessionRunning ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" strokeWidth={0} />}
+                    {isSessionRunning ? '⏹ Stop Session' : '▶ Start Focus'}
                 </button>
             </header>
 
             <div className="max-w-7xl mx-auto grid grid-cols-12 gap-x-12 gap-y-24">
                 {/* ── STATS MODULE ── */}
                 <div className="col-span-12">
-                    <div className="grid grid-cols-4 gap-8">
+                    <div className="grid grid-cols-4 gap-6">
                         {statsConfig.map((s, i) => (
-                            <div key={i} className="flex flex-col gap-4 group">
-                                <div className="flex items-center gap-3 text-[#A1A1A0] group-hover:text-[#1A1A1A] transition-colors">
-                                    <s.icon size={15} />
-                                    <span className="text-[11px] font-bold uppercase tracking-widest">{s.label}</span>
+                            <div key={i} className="flex flex-col gap-3 group cutout p-5 bg-white transform rotate-[${i % 2 === 0 ? '-' : ''}]1deg">
+                                <div className="flex items-center gap-3 text-faded group-hover:text-ink transition-colors">
+                                    <s.icon size={16} />
+                                    <span className="text-xs font-bold uppercase tracking-widest">{s.label}</span>
                                 </div>
                                 <div className="flex items-baseline justify-between">
-                                    <span className="text-3xl font-semibold tracking-tight tabular-nums">{s.value}</span>
-                                    <span className="text-[9px] font-black uppercase tracking-widest py-1 px-2 rounded-md bg-[#F1F1F0] text-[#5F5F5E]">{s.diff}</span>
+                                    <span className="text-3xl font-semibold tracking-tight">{s.value}</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest py-1 px-2 rounded-md bg-yellow-100 text-gray-600 transform rotate-2">{s.diff}</span>
                                 </div>
-                                <div className="h-px bg-[#E8E8E7] mt-3 mr-4 group-hover:bg-[#DCDCDA] transition-colors" />
+                                <div className="h-px bg-gray-200 mt-2 group-hover:bg-gray-300 transition-colors" />
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* ── ANALYTICS CORE ── */}
-                <div className="col-span-8 flex flex-col gap-8">
+                <div className="col-span-8 flex flex-col gap-6">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[15px] font-semibold flex items-center gap-3">
-                            <Activity size={16} strokeWidth={2.5} /> Cognitive Velocity
+                        <h3 className="text-lg font-title-doodle flex items-center gap-3 transform rotate-1">
+                            <Activity size={18} strokeWidth={2.5} /> 📊 Weekly Progress
                         </h3>
                     </div>
-                    <div className="p-10 bg-white border border-[#E8E8E7] rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                    <div className="p-8 bg-white border-2 border-gray-300 rounded-xl shadow-cutout hover:shadow-cutout-hover transition-all transform -rotate-0.5">
                         <BarChart data={stats.weeklyMinutes} labels={DAYS} />
                     </div>
                 </div>
 
-                <div className="col-span-4 flex flex-col gap-8">
-                    <h3 className="text-[15px] font-semibold flex items-center gap-3">
-                        <Target size={16} strokeWidth={2.5} /> Knowledge Density
+                <div className="col-span-4 flex flex-col gap-6">
+                    <h3 className="text-lg font-title-doodle flex items-center gap-3 transform -rotate-1">
+                        <Target size={18} strokeWidth={2.5} /> 📚 Subject Breakdown
                     </h3>
-                    <div className="p-10 bg-white border border-[#E8E8E7] rounded-2xl shadow-sm hover:shadow-md transition-shadow">
-                        <div className="flex flex-col gap-6">
-                            <div className="w-full h-2.5 bg-[#F1F1F0] rounded-full overflow-hidden flex">
+                    <div className="p-8 bg-yellow-50 border-2 border-yellow-200 rounded-xl shadow-cutout transform rotate-1">
+                        <div className="flex flex-col gap-5">
+                            <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden flex">
                                 {Object.entries(stats.subjects || {}).map(([label, val], i) => {
-                                    const colors = ['#111111', '#5F5F5E', '#A1A1A0', '#DCDCDA'];
+                                    const colors = ['#f8b739', '#4ecdc4', '#ff6b6b', '#95e1a3'];
                                     const total = Object.values(stats.subjects).reduce((a, b) => a + b, 0);
                                     return (
                                         <div
                                             key={i}
                                             style={{ width: `${(val / total) * 100}%`, backgroundColor: colors[i % colors.length] }}
-                                            className="h-full border-r border-white last:border-0"
+                                            className="h-full border-r-2 border-white last:border-0"
                                         />
                                     );
                                 })}
                             </div>
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 {Object.entries(stats.subjects || {}).map(([label, val], i) => {
-                                    const colors = ['#111111', '#5F5F5E', '#A1A1A0', '#DCDCDA'];
+                                    const colors = ['#f8b739', '#4ecdc4', '#ff6b6b', '#95e1a3'];
                                     const total = Object.values(stats.subjects).reduce((a, b) => a + b, 0);
                                     return (
                                         <SubjectRow
@@ -181,26 +182,26 @@ const MainOverview = ({ onNavigate }) => {
 
                 {/* ── LAB ACCESS ── */}
                 <div className="col-span-12">
-                    <div className="flex items-center gap-8 mb-12">
-                        <h3 className="text-[20px] font-semibold tracking-tight">Academic Lab</h3>
-                        <div className="h-px flex-1 bg-[#E8E8E7]" />
+                    <div className="flex items-center gap-6 mb-8">
+                        <h3 className="text-xl font-title-doodle tracking-tight transform -rotate-1">🧪 My Tools</h3>
+                        <div className="h-px flex-1 bg-gray-300" />
                     </div>
 
-                    <div className="grid grid-cols-4 gap-x-12">
+                    <div className="grid grid-cols-4 gap-x-8">
                         {labModules.map((f, i) => (
                             <motion.div
                                 key={i}
                                 onClick={() => onNavigate?.(f.id)}
-                                className="group cursor-pointer relative"
+                                className="group cursor-pointer relative cutout p-6 bg-white"
                             >
-                                <div className="w-12 h-12 bg-white border border-[#E8E8E7] rounded-xl flex items-center justify-center mb-6 group-hover:bg-[#111111] group-hover:text-white group-hover:border-black group-hover:shadow-lg transition-all duration-300">
-                                    <f.icon size={20} strokeWidth={1.5} />
+                                <div className="w-14 h-14 bg-yellow-100 border-2 border-gray-300 rounded-xl flex items-center justify-center mb-5 group-hover:bg-yellow-200 group-hover:border-gray-400 group-hover:shadow-cutout transition-all duration-300 transform group-hover:-translate-y-1">
+                                    <f.icon size={22} strokeWidth={1.5} />
                                 </div>
-                                <h4 className="text-[15px] font-bold mb-2 flex items-center gap-2">
+                                <h4 className="text-base font-bold mb-2 flex items-center gap-2 font-title-doodle">
                                     {f.title}
-                                    <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                                    <span className="opacity-0 group-hover:opacity-100 transition-all text-lg">→</span>
                                 </h4>
-                                <p className="text-[13px] font-medium text-[#A1A1A0] leading-relaxed line-clamp-2">{f.desc}</p>
+                                <p className="text-sm text-faded leading-relaxed line-clamp-2 font-handwritten">{f.desc}</p>
                             </motion.div>
                         ))}
                     </div>
