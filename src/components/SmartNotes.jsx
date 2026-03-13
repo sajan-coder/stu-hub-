@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Sparkles, File, BookOpen, Brain, Map, HelpCircle, X, ChevronRight, Trash2, Eye, EyeOff } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
+
+const MotionDiv = motion.div;
 
 const SmartNotes = ({ authToken }) => {
     const [selectedOption, setSelectedOption] = useState(null); // 1=Notes, 2=Flashcards, 3=MindMap, 4=MCQ
@@ -12,7 +14,7 @@ const SmartNotes = ({ authToken }) => {
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [questionCount, setQuestionCount] = useState(5);
 
-    const fetchAvailableFiles = async () => {
+    const fetchAvailableFiles = useCallback(async () => {
         if (!authToken) return;
         try {
             const res = await fetch('http://localhost:5000/api/files', {
@@ -25,9 +27,9 @@ const SmartNotes = ({ authToken }) => {
         } catch (err) {
             console.error('Failed to fetch files:', err);
         }
-    };
+    }, [authToken]);
 
-    useEffect(() => { fetchAvailableFiles(); }, [authToken]);
+    useEffect(() => { fetchAvailableFiles(); }, [fetchAvailableFiles]);
 
     const toggleFileSelection = (file) => {
         setSelectedFiles(prev => prev.some(f => f.id === file.id) ? prev.filter(f => f.id !== file.id) : [...prev, file]);
@@ -260,7 +262,6 @@ const SmartNotes = ({ authToken }) => {
         ];
         const leftBranches = branches.filter((_, idx) => idx % 2 === 0);
         const rightBranches = branches.filter((_, idx) => idx % 2 === 1);
-
         return (
             <div className="space-y-6">
                 <div
@@ -618,7 +619,7 @@ const SmartNotes = ({ authToken }) => {
 
                 <div className="grid grid-cols-2 gap-6">
                     {menuOptions.map(option => (
-                        <motion.div
+                        <MotionDiv
                             key={option.id}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -637,7 +638,7 @@ const SmartNotes = ({ authToken }) => {
                             <div className="mt-4 flex items-center text-sm font-bold text-gray-500">
                                 Click to start <ChevronRight size={16} />
                             </div>
-                        </motion.div>
+                        </MotionDiv>
                     ))}
                 </div>
             </div>

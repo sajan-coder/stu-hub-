@@ -1,7 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Upload, File, X, CheckCircle2, AlertCircle, Plus, CloudIcon, Fingerprint, Database, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useStudyStats } from '../hooks/useStudyStats';
+
+const MotionDiv = motion.div;
 
 const Vault = ({ compact = false, authToken }) => {
     const [persistedFiles, setPersistedFiles] = useState([]);
@@ -9,20 +11,23 @@ const Vault = ({ compact = false, authToken }) => {
     const [isDragging, setIsDragging] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const fileInputRef = useRef(null);
-    const { incrementFilesIndexed } = useStudyStats();
+    const { setFilesIndexed, syncFileSubjects, mergeFileSubjects, removeFileSubject } = useStudyStats();
 
-    const fetchFiles = async () => {
+    const fetchFiles = useCallback(async () => {
         try {
             const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
             const res = await fetch('http://localhost:5000/api/files', { headers });
             const data = await res.json();
-            setPersistedFiles(data.data || []);
+            const files = data.data || [];
+            setPersistedFiles(files);
+            setFilesIndexed(files.length);
+            syncFileSubjects(files);
         } catch (err) {
             console.error('Failed to fetch files:', err);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [authToken, setFilesIndexed, syncFileSubjects]);
 
     useEffect(() => {
         fetchFiles();
@@ -30,7 +35,7 @@ const Vault = ({ compact = false, authToken }) => {
         const handleRefresh = () => fetchFiles();
         window.addEventListener('vault-refresh', handleRefresh);
         return () => window.removeEventListener('vault-refresh', handleRefresh);
-    }, []);
+    }, [fetchFiles]);
 
     const processFiles = async (newFiles) => {
         if (!newFiles.length) return;
@@ -52,15 +57,16 @@ const Vault = ({ compact = false, authToken }) => {
                 body: formData
             });
             if (response.ok) {
+                const payload = await response.json();
                 window.dispatchEvent(new Event('vault-refresh'));
                 setUploadingFiles(prev => prev.filter(u => !uploads.find(up => up.id === u.id)));
-                incrementFilesIndexed(newFiles.length);
+                mergeFileSubjects(payload.indexedFiles || []);
             } else {
                 setUploadingFiles(prev => prev.map(u =>
                     uploads.find(up => up.id === u.id) ? { ...u, status: 'error' } : u
                 ));
             }
-        } catch (err) {
+        } catch {
             setUploadingFiles(prev => prev.map(u =>
                 uploads.find(up => up.id === u.id) ? { ...u, status: 'error' } : u
             ));
@@ -75,6 +81,7 @@ const Vault = ({ compact = false, authToken }) => {
             const res = await fetch(`http://localhost:5000/api/files/${id}`, { method: 'DELETE', headers });
             if (res.ok) {
                 setPersistedFiles(prev => prev.filter(f => f.id !== id));
+                removeFileSubject(id);
             }
         } catch (err) {
             console.error('Failed to delete file:', err);
@@ -126,7 +133,7 @@ const Vault = ({ compact = false, authToken }) => {
 
                     <AnimatePresence initial={false}>
                         {uploadingFiles.map((item) => (
-                            <motion.div
+                            <MotionDiv
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 key={item.id}
@@ -141,11 +148,11 @@ const Vault = ({ compact = false, authToken }) => {
                                         <p className="text-xs text-gray-400 uppercase">Uploading... ⏳</p>
                                     </div>
                                 </div>
-                            </motion.div>
+                            </MotionDiv>
                         ))}
 
                         {persistedFiles.map((item) => (
-                            <motion.div
+                            <MotionDiv
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={item.id}
@@ -172,7 +179,7 @@ const Vault = ({ compact = false, authToken }) => {
                                 >
                                     <Trash2 size={13} />
                                 </button>
-                            </motion.div>
+                            </MotionDiv>
                         ))}
                     </AnimatePresence>
 
@@ -232,7 +239,7 @@ const Vault = ({ compact = false, authToken }) => {
                 <div className="grid grid-cols-2 gap-4">
                     <AnimatePresence>
                         {persistedFiles.map((item) => (
-                            <motion.div
+                            <MotionDiv
                                 key={item.id}
                                 layout
                                 initial={{ opacity: 0, y: 20 }}
@@ -259,7 +266,7 @@ const Vault = ({ compact = false, authToken }) => {
                                 >
                                     <Trash2 size={16} />
                                 </button>
-                            </motion.div>
+                            </MotionDiv>
                         ))}
                     </AnimatePresence>
                 </div>

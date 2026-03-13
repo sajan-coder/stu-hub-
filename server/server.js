@@ -183,6 +183,85 @@ const sanitizeMindMapPayload = (payload) => {
     };
 };
 
+const SUBJECT_KEYWORDS = {
+    Mathematics: ['algebra', 'calculus', 'equation', 'theorem', 'integral', 'derivative', 'matrix', 'geometry', 'trigonometry', 'probability', 'statistics', 'linear algebra', 'coordinate'],
+    Physics: ['force', 'motion', 'energy', 'velocity', 'acceleration', 'quantum', 'newton', 'thermodynamics', 'wave', 'electricity', 'magnetism', 'optics', 'mechanics'],
+    Chemistry: ['atom', 'molecule', 'reaction', 'chemical', 'bond', 'acid', 'base', 'organic', 'compound', 'stoichiometry', 'element', 'periodic table'],
+    Biology: ['cell', 'genetics', 'photosynthesis', 'ecosystem', 'evolution', 'organism', 'enzyme', 'anatomy', 'physiology', 'dna', 'protein', 'respiration'],
+    'Computer Science': ['algorithm', 'algorithms', 'database', 'databases', 'function', 'functions', 'variable', 'variables', 'array', 'arrays', 'network', 'binary', 'programming', 'software', 'javascript', 'python', 'api', 'apis', 'computer', 'computing', 'data structure', 'data structures', 'operating system', 'compiler', 'recursion', 'object oriented', 'oop', 'machine learning', 'artificial intelligence', 'ai', 'html', 'css', 'react', 'node', 'java', 'c++', 'c language', 'sql'],
+    History: ['empire', 'revolution', 'war', 'civilization', 'dynasty', 'treaty', 'colonial', 'medieval', 'historical', 'kingdom', 'independence'],
+    Literature: ['poem', 'poetry', 'novel', 'character', 'theme', 'metaphor', 'drama', 'author', 'narrative', 'literary', 'prose'],
+    Economics: ['market', 'demand', 'supply', 'inflation', 'gdp', 'trade', 'economy', 'elasticity', 'consumer', 'producer', 'fiscal'],
+};
+
+const escapeRegExp = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const inferSubjectFromKeywords = (fileName = '', text = '') => {
+    const normalizedFileName = String(fileName).toLowerCase();
+    const normalizedText = String(text).slice(0, 20000).toLowerCase();
+    const corpus = `${normalizedFileName} ${normalizedText}`;
+    let bestMatch = { label: 'General', score: 0 };
+
+    Object.entries(SUBJECT_KEYWORDS).forEach(([label, keywords]) => {
+        let score = 0;
+
+        keywords.forEach((keyword) => {
+            const pattern = new RegExp(`\\b${escapeRegExp(keyword)}\\b`, 'g');
+            const textMatches = normalizedText.match(pattern);
+            const fileNameMatches = normalizedFileName.match(pattern);
+
+            score += (textMatches ? textMatches.length : 0);
+            score += (fileNameMatches ? fileNameMatches.length * 3 : 0);
+        });
+
+        if (corpus.includes(label.toLowerCase())) {
+            score += 4;
+        }
+
+        if (score > bestMatch.score) {
+            bestMatch = { label, score };
+        }
+    });
+
+    return bestMatch;
+};
+
+const inferSubjectFromContent = async (fileName = '', text = '') => {
+    const keywordMatch = inferSubjectFromKeywords(fileName, text);
+    if (keywordMatch.score >= 3) {
+        return keywordMatch.label;
+    }
+
+    if (!azureClient) {
+        return keywordMatch.label;
+    }
+
+    try {
+        const excerpt = String(text).replace(/\s+/g, ' ').slice(0, 5000);
+        const completion = await azureClient.chat.completions.create({
+            model: process.env.AZURE_OPENAI_CHAT_DEPLOYMENT.trim(),
+            messages: [
+                {
+                    role: 'system',
+                    content: 'Classify the uploaded study material into exactly one subject from this list: Computer Science, Mathematics, Physics, Chemistry, Biology, History, Literature, Economics, General. Reply with only the subject label.'
+                },
+                {
+                    role: 'user',
+                    content: `Filename: ${fileName}\n\nContent excerpt:\n${excerpt}`
+                }
+            ],
+            temperature: 0,
+            max_tokens: 20,
+        });
+
+        const label = String(completion.choices?.[0]?.message?.content || '').trim();
+        return SUBJECT_KEYWORDS[label] ? label : keywordMatch.label;
+    } catch (err) {
+        console.error('[SUBJECT] AI classification fallback failed:', err.message);
+        return keywordMatch.label;
+    }
+};
+
 app.get('/api/health/supabase', async (_req, res) => {
     if (!supabase) {
         return res.status(500).json({ ok: false, error: 'Supabase client not configured.' });
@@ -292,6 +371,7 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
         for (const file of req.files) {
             console.log(`[API/UPLOAD] Processing file: ${file.originalname} (${file.size} bytes)`);
             let text = '';
+            let inferredSubject = 'General';
             try {
 
                 // 1. Extraction (PDF + plain text only; OCR/images disabled)
@@ -335,6 +415,7 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
                 }
 
                 // 2. Chunking & Embedding
+                inferredSubject = await inferSubjectFromContent(file.originalname, text);
                 const chunks = text.match(/[\s\S]{1,1500}/g) || [];
                 console.log(`[API/UPLOAD] Chunked into ${chunks.length} parts. Generating embeddings...`);
 
@@ -352,7 +433,8 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
                             metadata: {
                                 text: chunks[i],
                                 originalName: file.originalname,
-                                type: 'document'
+                                type: 'document',
+                                subject: inferredSubject,
                             }
                         });
                     } catch (innerErr) {
@@ -402,7 +484,7 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
                     if (insertError) {
                         if (isFilesTableMissing(insertError)) {
                             console.warn('[SUPABASE] files table missing, using local file index store fallback.');
-                            const fallbackRow = insertIntoLocalFilesStore(file, user.id);
+                            const fallbackRow = { ...insertIntoLocalFilesStore(file, user.id), subject: inferredSubject };
                             indexedFiles.push(fallbackRow);
                         } else {
                             console.error('[SUPABASE] File log insert failed:', insertError.message);
@@ -410,10 +492,10 @@ app.post('/api/upload', upload.array('files'), async (req, res) => {
                             continue;
                         }
                     } else {
-                        indexedFiles.push(inserted);
+                        indexedFiles.push({ ...inserted, subject: inferredSubject });
                     }
                 } else {
-                    indexedFiles.push(insertIntoLocalFilesStore(file, user.id));
+                    indexedFiles.push({ ...insertIntoLocalFilesStore(file, user.id), subject: inferredSubject });
                 }
 
             } finally {

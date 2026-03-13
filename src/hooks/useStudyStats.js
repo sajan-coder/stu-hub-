@@ -7,24 +7,94 @@ const defaultStats = {
     filesIndexed: 0,
     tasksCompleted: 0,
     totalTasks: 0,
-    // Weekly study minutes: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
     weeklyMinutes: [0, 0, 0, 0, 0, 0, 0],
-    // Subject usage count
+    dailyFocusMinutes: {},
     subjects: {},
-    // Today's session start timestamps
+    fileSubjects: {},
     todaySessions: [],
-    // Running session start (null if not running)
     sessionStart: null,
-    // Accumulator for minutes before start of current session
-    todayMinutesAcc: 0,
     lastUpdated: null,
 };
+
+function getDayKey(input = new Date()) {
+    const date = input instanceof Date ? input : new Date(input);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function getCurrentWeekKeys(reference = new Date()) {
+    const start = new Date(reference);
+    const mondayIndex = (start.getDay() + 6) % 7;
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - mondayIndex);
+
+    return Array.from({ length: 7 }, (_, index) => {
+        const current = new Date(start);
+        current.setDate(start.getDate() + index);
+        return getDayKey(current);
+    });
+}
+
+function distributeMinutesByDay(startMs, endMs) {
+    if (!startMs || !endMs || endMs <= startMs) {
+        return {};
+    }
+
+    const minutesByDay = {};
+    let cursor = startMs;
+
+    while (cursor < endMs) {
+        const current = new Date(cursor);
+        const nextMidnight = new Date(current);
+        nextMidnight.setHours(24, 0, 0, 0);
+
+        const sliceEnd = Math.min(endMs, nextMidnight.getTime());
+        const dayKey = getDayKey(current);
+        const minutes = (sliceEnd - cursor) / 60000;
+
+        minutesByDay[dayKey] = (minutesByDay[dayKey] || 0) + minutes;
+        cursor = sliceEnd;
+    }
+
+    return minutesByDay;
+}
+
+function mergeDailyMinutes(baseMinutes = {}, extraMinutes = {}) {
+    const merged = { ...baseMinutes };
+
+    Object.entries(extraMinutes).forEach(([dayKey, minutes]) => {
+        merged[dayKey] = (merged[dayKey] || 0) + minutes;
+    });
+
+    return merged;
+}
 
 function getStoredStats() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (!raw) return defaultStats;
-        return { ...defaultStats, ...JSON.parse(raw) };
+
+        const parsed = JSON.parse(raw);
+        const merged = { ...defaultStats, ...parsed };
+
+        if (
+            (!merged.dailyFocusMinutes || Object.keys(merged.dailyFocusMinutes).length === 0) &&
+            Array.isArray(merged.weeklyMinutes) &&
+            merged.weeklyMinutes.some((minutes) => minutes > 0)
+        ) {
+            const weekKeys = getCurrentWeekKeys();
+            merged.dailyFocusMinutes = weekKeys.reduce((acc, dayKey, index) => {
+                const minutes = merged.weeklyMinutes[index] || 0;
+                if (minutes > 0) {
+                    acc[dayKey] = minutes;
+                }
+                return acc;
+            }, {});
+        }
+
+        return merged;
     } catch {
         return defaultStats;
     }
@@ -33,93 +103,106 @@ function getStoredStats() {
 function saveStats(stats) {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-        // Trigger event for same-window syncing
         window.dispatchEvent(new Event('storage_sync'));
-    } catch { }
+    } catch {
+        return;
+    }
 }
 
 export function useStudyStats() {
     const [stats, setStats] = useState(getStoredStats);
+    const [now, setNow] = useState(() => Date.now());
 
-    // Sync with localStorage from other instances/tabs
     useEffect(() => {
         const handleSync = () => setStats(getStoredStats());
         window.addEventListener('storage', handleSync);
         window.addEventListener('storage_sync', handleSync);
+
         return () => {
             window.removeEventListener('storage', handleSync);
             window.removeEventListener('storage_sync', handleSync);
         };
     }, []);
 
-    // Live clock for elapsed session time — update every second for responsive UI
-    const [now, setNow] = useState(Date.now());
     useEffect(() => {
         const id = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(id);
     }, []);
 
     const update = useCallback((fn) => {
-        setStats(prev => {
+        setStats((prev) => {
             const next = fn(prev);
             saveStats(next);
             return next;
         });
     }, []);
 
-    // Derived values
-    const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
+    const liveDailyMinutes = stats.sessionStart
+        ? distributeMinutesByDay(stats.sessionStart, now)
+        : {};
 
-    // Live total minutes for today (persisted minutes + live session seconds converted)
-    const liveSessionMs = stats.sessionStart ? (now - stats.sessionStart) : 0;
-    const todayMinutes = (stats.todayMinutesAcc || 0) + (liveSessionMs / 60000);
-
+    const allDailyMinutes = mergeDailyMinutes(stats.dailyFocusMinutes, liveDailyMinutes);
+    const weekKeys = getCurrentWeekKeys(now);
+    const weeklyMinutes = weekKeys.map((dayKey) => allDailyMinutes[dayKey] || 0);
+    const todayMinutes = allDailyMinutes[getDayKey(now)] || 0;
     const displayMinutes = Math.floor(todayMinutes);
     const todayHours = `${Math.floor(displayMinutes / 60)}h ${displayMinutes % 60}m`;
-
-    const weekTotal = stats.weeklyMinutes.reduce((a, b) => a + b, 0) + (liveSessionMs / 60000);
-
-    const topSubject = Object.entries(stats.subjects).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+    const weekTotal = weeklyMinutes.reduce((sum, minutes) => sum + minutes, 0);
+    const derivedSubjects = Object.values(stats.fileSubjects || {}).reduce((acc, subject) => {
+        if (subject) {
+            acc[subject] = (acc[subject] || 0) + 1;
+        }
+        return acc;
+    }, {});
+    const subjectCounts = Object.keys(derivedSubjects).length > 0 ? derivedSubjects : (stats.subjects || {});
+    const topSubject = Object.entries(subjectCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || '--';
 
     const startSession = useCallback(() => {
-        update(prev => ({
-            ...prev,
-            sessionStart: Date.now(),
-            // Sync current weekly minutes to accumulator if it's a new day
-            todayMinutesAcc: prev.weeklyMinutes[todayIdx] || 0
-        }));
-    }, [update, todayIdx]);
+        update((prev) => {
+            if (prev.sessionStart) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                sessionStart: Date.now(),
+                lastUpdated: new Date().toISOString(),
+            };
+        });
+    }, [update]);
 
     const stopSession = useCallback(() => {
-        update(prev => {
-            if (!prev.sessionStart) return prev;
-            const sessionMs = Date.now() - prev.sessionStart;
-            const idx = (new Date().getDay() + 6) % 7;
-            const w = [...prev.weeklyMinutes];
-            w[idx] = (w[idx] || 0) + (sessionMs / 60000);
+        update((prev) => {
+            if (!prev.sessionStart) {
+                return prev;
+            }
+
+            const sessionEnd = Date.now();
+            const sessionMinutes = distributeMinutesByDay(prev.sessionStart, sessionEnd);
+
             return {
                 ...prev,
                 sessionStart: null,
-                weeklyMinutes: w,
-                todayMinutesAcc: w[idx]
+                dailyFocusMinutes: mergeDailyMinutes(prev.dailyFocusMinutes, sessionMinutes),
+                lastUpdated: new Date(sessionEnd).toISOString(),
             };
         });
     }, [update]);
 
     const incrementNotes = useCallback(() => {
-        update(prev => ({ ...prev, notesCount: (prev.notesCount || 0) + 1 }));
+        update((prev) => ({ ...prev, notesCount: (prev.notesCount || 0) + 1 }));
     }, [update]);
 
     const incrementFilesIndexed = useCallback((n) => {
-        update(prev => ({ ...prev, filesIndexed: (prev.filesIndexed || 0) + (n || 1) }));
+        update((prev) => ({ ...prev, filesIndexed: (prev.filesIndexed || 0) + (n || 1) }));
     }, [update]);
 
     const setFilesIndexed = useCallback((n) => {
-        update(prev => ({ ...prev, filesIndexed: n }));
+        update((prev) => ({ ...prev, filesIndexed: n }));
     }, [update]);
 
     const completeTask = useCallback(() => {
-        update(prev => ({
+        update((prev) => ({
             ...prev,
             tasksCompleted: (prev.tasksCompleted || 0) + 1,
             totalTasks: Math.max((prev.totalTasks || 0), (prev.tasksCompleted || 0) + 1),
@@ -127,32 +210,129 @@ export function useStudyStats() {
     }, [update]);
 
     const addTask = useCallback(() => {
-        update(prev => ({ ...prev, totalTasks: (prev.totalTasks || 0) + 1 }));
+        update((prev) => ({ ...prev, totalTasks: (prev.totalTasks || 0) + 1 }));
     }, [update]);
 
     const logSubject = useCallback((subject) => {
-        update(prev => ({
+        if (!subject) {
+            return;
+        }
+        update((prev) => ({
             ...prev,
             subjects: { ...prev.subjects, [subject]: ((prev.subjects || {})[subject] || 0) + 1 },
         }));
     }, [update]);
 
-    // Seed some realistic demo data if completely fresh (no sessions logged)
+    const logSubjects = useCallback((subjects) => {
+        const validSubjects = (Array.isArray(subjects) ? subjects : []).filter(Boolean);
+        if (validSubjects.length === 0) {
+            return;
+        }
+
+        update((prev) => {
+            const nextSubjects = { ...(prev.subjects || {}) };
+            validSubjects.forEach((subject) => {
+                nextSubjects[subject] = (nextSubjects[subject] || 0) + 1;
+            });
+
+            return {
+                ...prev,
+                subjects: nextSubjects,
+            };
+        });
+    }, [update]);
+
+    const syncFileSubjects = useCallback((files) => {
+        const indexedFiles = Array.isArray(files) ? files : [];
+
+        update((prev) => {
+            const nextFileSubjects = {};
+
+            indexedFiles.forEach((file) => {
+                const fileId = file?.id != null ? String(file.id) : null;
+                if (!fileId) {
+                    return;
+                }
+
+                nextFileSubjects[fileId] = file.subject || prev.fileSubjects?.[fileId] || 'General';
+            });
+
+            return {
+                ...prev,
+                fileSubjects: nextFileSubjects,
+            };
+        });
+    }, [update]);
+
+    const mergeFileSubjects = useCallback((files) => {
+        const indexedFiles = Array.isArray(files) ? files : [];
+
+        update((prev) => {
+            const nextFileSubjects = { ...(prev.fileSubjects || {}) };
+
+            indexedFiles.forEach((file) => {
+                const fileId = file?.id != null ? String(file.id) : null;
+                if (!fileId) {
+                    return;
+                }
+
+                nextFileSubjects[fileId] = file.subject || nextFileSubjects[fileId] || 'General';
+            });
+
+            return {
+                ...prev,
+                fileSubjects: nextFileSubjects,
+            };
+        });
+    }, [update]);
+
+    const removeFileSubject = useCallback((fileId) => {
+        if (fileId == null) {
+            return;
+        }
+
+        update((prev) => {
+            const nextFileSubjects = { ...(prev.fileSubjects || {}) };
+            delete nextFileSubjects[String(fileId)];
+
+            return {
+                ...prev,
+                fileSubjects: nextFileSubjects,
+            };
+        });
+    }, [update]);
+
     const seedDemoData = useCallback(() => {
+        const demoMinutes = [95, 120, 45, 180, 60, 30, 0];
+        const weekKeysForSeed = getCurrentWeekKeys();
+        const dailyFocusMinutes = weekKeysForSeed.reduce((acc, dayKey, index) => {
+            if (demoMinutes[index] > 0) {
+                acc[dayKey] = demoMinutes[index];
+            }
+            return acc;
+        }, {});
+
         update(() => ({
+            ...defaultStats,
             notesCount: 12,
             filesIndexed: 5,
             tasksCompleted: 8,
             totalTasks: 11,
-            weeklyMinutes: [95, 120, 45, 180, 60, 30, 0],
+            weeklyMinutes: demoMinutes,
+            dailyFocusMinutes,
             subjects: { Calculus: 14, Physics: 9, History: 6, Chemistry: 4 },
-            todaySessions: [],
             sessionStart: null,
+            lastUpdated: new Date().toISOString(),
         }));
     }, [update]);
 
     return {
-        stats,
+        stats: {
+            ...stats,
+            weeklyMinutes,
+            dailyFocusMinutes: allDailyMinutes,
+            subjects: subjectCounts,
+        },
         todayHours,
         todayMinutes,
         weekTotal,
@@ -160,10 +340,15 @@ export function useStudyStats() {
         startSession,
         stopSession,
         incrementNotes,
+        incrementFilesIndexed,
         setFilesIndexed,
         completeTask,
         addTask,
         logSubject,
+        logSubjects,
+        syncFileSubjects,
+        mergeFileSubjects,
+        removeFileSubject,
         seedDemoData,
         isSessionRunning: !!stats.sessionStart,
     };

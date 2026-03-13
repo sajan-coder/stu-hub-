@@ -5,11 +5,12 @@ import {
     Database, ClipboardCheck, TrendingUp, Target,
     ChevronRight, ChevronDown, Monitor, Clock4
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useStudyStats } from '../hooks/useStudyStats';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const MotionDiv = motion.div;
 
 // High-end Scholastic Chart
 function BarChart({ data, labels }) {
@@ -22,7 +23,7 @@ function BarChart({ data, labels }) {
                 return (
                     <div key={i} className="flex-1 flex flex-col items-center gap-4 relative">
                         <div className="h-32 w-full flex flex-col justify-end">
-                            <motion.div
+                            <MotionDiv
                                 initial={{ height: 0 }}
                                 animate={{ height: `${Math.max(pct, 5)}%` }}
                                 className={`w-full rounded-2xl transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isToday ? 'bg-[#111111] shadow-xl' : 'bg-[#E8E8E7] group-hover/chart:bg-[#DCDCDA]'
@@ -65,12 +66,14 @@ const MainOverview = ({ onNavigate }) => {
 
     const dateStr = now.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const weekHours = Math.round(weekTotal / 60 * 10) / 10;
+    const weeklyMinutes = stats.weeklyMinutes || [0, 0, 0, 0, 0, 0, 0];
+    const totalSubjectSessions = Object.values(stats.subjects || {}).reduce((sum, value) => sum + value, 0);
 
     const statsConfig = [
-        { icon: Clock4, label: "Session focus", value: todayHours || '0h 0m', diff: '+14%', color: 'text-grey-900', bg: 'bg-[#F1F1F0]' },
+        { icon: Clock4, label: "Session focus", value: todayHours || '0h 0m', diff: isSessionRunning ? 'Live' : 'Today', color: 'text-grey-900', bg: 'bg-[#F1F1F0]' },
         { icon: Database, label: 'Materials indexed', value: String(stats.filesIndexed || 0), diff: 'Sync', color: 'text-grey-900', bg: 'bg-[#F1F1F0]' },
         { icon: ClipboardCheck, label: 'Task completion', value: `${stats.tasksCompleted || 0}/${stats.totalTasks || 0}`, diff: 'Active', color: 'text-grey-400', bg: 'bg-[#F1F1F0]' },
-        { icon: TrendingUp, label: 'Current streak', value: `${weekHours}h`, diff: 'Steady', color: 'text-grey-400', bg: 'bg-[#F1F1F0]' },
+        { icon: TrendingUp, label: 'Weekly focus', value: `${weekHours}h`, diff: topSubject, color: 'text-grey-400', bg: 'bg-[#F1F1F0]' },
     ];
 
     const labModules = [
@@ -81,7 +84,7 @@ const MainOverview = ({ onNavigate }) => {
     ];
 
     return (
-        <motion.div
+        <MotionDiv
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="flex-1 ml-[72px] bg-paper-cream min-h-screen py-16 px-20 font-handwritten selection:bg-yellow-200"
@@ -139,7 +142,7 @@ const MainOverview = ({ onNavigate }) => {
                         </h3>
                     </div>
                     <div className="p-8 bg-white border-2 border-gray-300 rounded-xl shadow-cutout hover:shadow-cutout-hover transition-all transform -rotate-0.5">
-                        <BarChart data={stats.weeklyMinutes} labels={DAYS} />
+                        <BarChart data={weeklyMinutes} labels={DAYS} />
                     </div>
                 </div>
 
@@ -150,13 +153,12 @@ const MainOverview = ({ onNavigate }) => {
                     <div className="p-8 bg-yellow-50 border-2 border-yellow-200 rounded-xl shadow-cutout transform rotate-1">
                         <div className="flex flex-col gap-5">
                             <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden flex">
-                                {Object.entries(stats.subjects || {}).map(([label, val], i) => {
+                                {Object.entries(stats.subjects || {}).map(([, val], i) => {
                                     const colors = ['#f8b739', '#4ecdc4', '#ff6b6b', '#95e1a3'];
-                                    const total = Object.values(stats.subjects).reduce((a, b) => a + b, 0);
                                     return (
                                         <div
                                             key={i}
-                                            style={{ width: `${(val / total) * 100}%`, backgroundColor: colors[i % colors.length] }}
+                                            style={{ width: `${totalSubjectSessions > 0 ? (val / totalSubjectSessions) * 100 : 0}%`, backgroundColor: colors[i % colors.length] }}
                                             className="h-full border-r-2 border-white last:border-0"
                                         />
                                     );
@@ -165,12 +167,11 @@ const MainOverview = ({ onNavigate }) => {
                             <div className="space-y-2">
                                 {Object.entries(stats.subjects || {}).map(([label, val], i) => {
                                     const colors = ['#f8b739', '#4ecdc4', '#ff6b6b', '#95e1a3'];
-                                    const total = Object.values(stats.subjects).reduce((a, b) => a + b, 0);
                                     return (
                                         <SubjectRow
                                             key={i}
                                             label={label}
-                                            percentage={Math.round((val / total) * 100)}
+                                            percentage={totalSubjectSessions > 0 ? Math.round((val / totalSubjectSessions) * 100) : 0}
                                             color={colors[i % colors.length]}
                                         />
                                     );
@@ -189,7 +190,7 @@ const MainOverview = ({ onNavigate }) => {
 
                     <div className="grid grid-cols-4 gap-x-8">
                         {labModules.map((f, i) => (
-                            <motion.div
+                            <MotionDiv
                                 key={i}
                                 onClick={() => onNavigate?.(f.id)}
                                 className="group cursor-pointer relative cutout p-6 bg-white"
@@ -202,12 +203,12 @@ const MainOverview = ({ onNavigate }) => {
                                     <span className="opacity-0 group-hover:opacity-100 transition-all text-lg">→</span>
                                 </h4>
                                 <p className="text-sm text-faded leading-relaxed line-clamp-2 font-handwritten">{f.desc}</p>
-                            </motion.div>
+                            </MotionDiv>
                         ))}
                     </div>
                 </div>
             </div>
-        </motion.div>
+        </MotionDiv>
     );
 };
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
     Send,
     User,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { formatAIResponse } from '../utils/formatAI';
+import { useStudyStats } from '../hooks/useStudyStats';
 
 const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
     const [messages, setMessages] = useState([]);
@@ -26,12 +27,13 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
     const [currentSessionId, setCurrentSessionId] = useState(null);
     const chatEndRef = useRef(null);
     const fileInputRef = useRef(null);
+    const { setFilesIndexed, syncFileSubjects, mergeFileSubjects, removeFileSubject } = useStudyStats();
 
     const scrollToBottom = () => {
         chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    const loadSessionHistory = async (sessionId) => {
+    const loadSessionHistory = useCallback(async (sessionId) => {
         if (!sessionId || !authToken) {
             setMessages([]);
             return;
@@ -53,11 +55,12 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
         } catch (err) {
             console.error('Failed to load history:', err);
         }
-    };
+    }, [authToken]);
 
-    const fetchIndexedFiles = async () => {
+    const fetchIndexedFiles = useCallback(async () => {
         if (!authToken) {
             setIndexedFiles([]);
+            setFilesIndexed(0);
             return;
         }
         try {
@@ -65,11 +68,14 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             const data = await res.json();
-            setIndexedFiles(data.data || []);
+            const files = data.data || [];
+            setIndexedFiles(files);
+            setFilesIndexed(files.length);
+            syncFileSubjects(files);
         } catch (err) {
             console.error('Failed to load indexed files:', err);
         }
-    };
+    }, [authToken, setFilesIndexed, syncFileSubjects]);
 
     const removeIndexedFile = async (id) => {
         try {
@@ -78,7 +84,12 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             if (res.ok) {
-                setIndexedFiles((prev) => prev.filter((f) => String(f.id) !== String(id)));
+                setIndexedFiles((prev) => {
+                    const nextFiles = prev.filter((f) => String(f.id) !== String(id));
+                    setFilesIndexed(nextFiles.length);
+                    return nextFiles;
+                });
+                removeFileSubject(id);
             }
         } catch (err) {
             console.error('Failed to delete indexed file:', err);
@@ -87,7 +98,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
 
     useEffect(() => {
         fetchIndexedFiles();
-    }, [authToken]);
+    }, [fetchIndexedFiles]);
 
     useEffect(() => {
         scrollToBottom();
@@ -98,7 +109,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             setCurrentSessionId(selectedSessionId);
             loadSessionHistory(selectedSessionId);
         }
-    }, [selectedSessionId]);
+    }, [loadSessionHistory, selectedSessionId]);
 
     useEffect(() => {
         setCurrentSessionId(null);
@@ -164,6 +175,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             });
             const payload = await res.json();
             if (res.ok && payload.indexedFiles?.length) {
+                mergeFileSubjects(payload.indexedFiles);
                 setMessages(prev => [...prev, {
                     role: 'bot',
                     content: `**DOCUMENT INDEXING COMPLETE**: I've processed unit "${file.name}". Context is now available for RAG processing.`,
