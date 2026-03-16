@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { File, BookOpen, Sparkles, RefreshCw, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const SimpleFlipCard = ({ card, onDelete, cardIndex, totalCards }) => {
     return (
         <div className="flip-card-container cutout mx-auto">
@@ -101,7 +103,7 @@ const FlashcardGenerator = ({ authToken }) => {
     const fetchAvailableFiles = async () => {
         if (!authToken) return;
         try {
-            const res = await fetch('http://localhost:5000/api/files', {
+            const res = await fetch(`${API_URL}/api/files`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             if (res.ok) {
@@ -119,7 +121,7 @@ const FlashcardGenerator = ({ authToken }) => {
         if (selectedFiles.length === 0) { alert('Please select at least one file'); return; }
         setIsGenerating(true);
         try {
-            const res = await fetch('http://localhost:5000/api/flashcards/generate', {
+            const res = await fetch(`${API_URL}/api/flashcards/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
                 body: JSON.stringify({ fileIds: selectedFiles.map(f => f.id), numCards: cardCount }),

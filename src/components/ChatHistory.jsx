@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Clock, MessageSquare, Trash2, Plus, ChevronRight, Search, History, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession }) => {
     const [sessions, setSessions] = useState([]);
     const [query, setQuery] = useState('');
@@ -14,7 +16,7 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
             return;
         }
         try {
-            const res = await fetch('http://localhost:5000/api/history/sessions', {
+            const res = await fetch(`${API_URL}/api/history/sessions`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             if (!res.ok) return;
@@ -68,7 +70,7 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
     const clearAllHistory = async () => {
         if (!window.confirm('Clear all historical neural traces?')) return;
         try {
-            const res = await fetch('http://localhost:5000/api/history', {
+            const res = await fetch(`${API_URL}/api/history`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -85,7 +87,7 @@ const ChatHistory = ({ authToken, activeSessionId, onSelectSession, onNewSession
         e.stopPropagation();
         if (!window.confirm('Delete this chat session permanently?')) return;
         try {
-            const res = await fetch(`http://localhost:5000/api/history?session_id=${encodeURIComponent(sessionId)}`, {
+            const res = await fetch(`${API_URL}/api/history?session_id=${encodeURIComponent(sessionId)}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${authToken}` },
             });

@@ -5,6 +5,8 @@ import { useStudyStats } from '../hooks/useStudyStats';
 
 const MotionDiv = motion.div;
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const Vault = ({ compact = false, authToken }) => {
     const [persistedFiles, setPersistedFiles] = useState([]);
     const [uploadingFiles, setUploadingFiles] = useState([]);
@@ -16,7 +18,7 @@ const Vault = ({ compact = false, authToken }) => {
     const fetchFiles = useCallback(async () => {
         try {
             const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-            const res = await fetch('http://localhost:5000/api/files', { headers });
+            const res = await fetch(`${API_URL}/api/files`, { headers });
             const data = await res.json();
             const files = data.data || [];
             setPersistedFiles(files);
@@ -51,7 +53,7 @@ const Vault = ({ compact = false, authToken }) => {
         newFiles.forEach(f => formData.append('files', f));
 
         try {
-            const response = await fetch('http://localhost:5000/api/upload', {
+            const response = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
                 body: formData
@@ -78,7 +80,7 @@ const Vault = ({ compact = false, authToken }) => {
 
         try {
             const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
-            const res = await fetch(`http://localhost:5000/api/files/${id}`, { method: 'DELETE', headers });
+            const res = await fetch(`${API_URL}/api/files/${id}`, { method: 'DELETE', headers });
             if (res.ok) {
                 setPersistedFiles(prev => prev.filter(f => f.id !== id));
                 removeFileSubject(id);

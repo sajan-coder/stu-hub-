@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 
 const MotionDiv = motion.div;
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const SmartNotes = ({ authToken }) => {
     const [selectedOption, setSelectedOption] = useState(null); // 1=Notes, 2=Flashcards, 3=MindMap, 4=MCQ
     const [generatedContent, setGeneratedContent] = useState(null);
@@ -17,7 +19,7 @@ const SmartNotes = ({ authToken }) => {
     const fetchAvailableFiles = useCallback(async () => {
         if (!authToken) return;
         try {
-            const res = await fetch('http://localhost:5000/api/files', {
+            const res = await fetch(`${API_URL}/api/files`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             if (res.ok) {
@@ -82,19 +84,19 @@ const SmartNotes = ({ authToken }) => {
 
             switch (selectedOption) {
                 case 1: // Study Notes
-                    endpoint = 'http://localhost:5000/api/notes/generate';
+                    endpoint = `${API_URL}/api/notes/generate`;
                     body = { fileIds: selectedFiles.map(f => f.id) };
                     break;
                 case 2: // Flashcards
-                    endpoint = 'http://localhost:5000/api/flashcards/generate';
+                    endpoint = `${API_URL}/api/flashcards/generate`;
                     body = { fileIds: selectedFiles.map(f => f.id), numCards: requestedCount };
                     break;
                 case 3: // Mind Map
-                    endpoint = 'http://localhost:5000/api/mindmap/generate';
+                    endpoint = `${API_URL}/api/mindmap/generate`;
                     body = { fileIds: selectedFiles.map(f => f.id) };
                     break;
                 case 4: // MCQ
-                    endpoint = 'http://localhost:5000/api/mcq/generate';
+                    endpoint = `${API_URL}/api/mcq/generate`;
                     body = { fileIds: selectedFiles.map(f => f.id), numQuestions: requestedCount };
                     break;
                 default:
@@ -260,140 +262,172 @@ const SmartNotes = ({ authToken }) => {
             { bubble: '#ddd6fe', border: '#7c3aed', line: '#8b5cf6', chip: '#f2ebff' },
             { bubble: '#fed7aa', border: '#ea580c', line: '#f97316', chip: '#fff3e8' },
         ];
-        const leftBranches = branches.filter((_, idx) => idx % 2 === 0);
-        const rightBranches = branches.filter((_, idx) => idx % 2 === 1);
+        const cards = branches.slice(0, 4);
+        const overflowBranches = branches.slice(4);
+        const cardLayouts = [
+            { position: 'left-[6%] top-[10%] rotate-[-2deg]', width: 'w-[25%]', minHeight: 'min-h-[170px]' },
+            { position: 'left-[3%] bottom-[12%] rotate-[1deg]', width: 'w-[31%]', minHeight: 'min-h-[160px]' },
+            { position: 'right-[6%] top-[8%] rotate-[2deg]', width: 'w-[28%]', minHeight: 'min-h-[170px]' },
+            { position: 'right-[5%] bottom-[10%] rotate-[-1deg]', width: 'w-[27%]', minHeight: 'min-h-[165px]' },
+        ];
+        const arrows = [
+            'left-[31%] top-[28%] rotate-[8deg]',
+            'left-[30%] bottom-[28%] rotate-[98deg]',
+            'right-[31%] top-[29%] rotate-[-32deg]',
+            'right-[31%] bottom-[26%] rotate-[38deg]',
+        ];
+
         return (
             <div className="space-y-6">
                 <div
-                    className="relative overflow-hidden rounded-[32px] border-2 border-gray-200 p-6 md:p-10"
+                    className="relative overflow-hidden rounded-[28px] border-2 border-[#d2c79a] p-6 md:p-8"
                     style={{
-                        background: 'radial-gradient(circle at top, rgba(255,255,255,0.98), rgba(250,248,240,0.98) 56%, rgba(245,241,232,0.98) 100%)',
-                        boxShadow: 'var(--shadow-cutout)',
+                        backgroundColor: '#f6efc9',
+                        backgroundImage: 'linear-gradient(to bottom, rgba(74, 85, 104, 0.18) 1px, transparent 1px)',
+                        backgroundSize: '100% 49px',
+                        boxShadow: '0 18px 36px rgba(84, 73, 40, 0.16)',
                     }}
                 >
-                    <div className="pointer-events-none absolute inset-0 opacity-70" style={{
-                        backgroundImage: 'radial-gradient(circle at 12% 18%, rgba(162,155,254,0.16) 0 2px, transparent 2px), radial-gradient(circle at 84% 16%, rgba(255,107,107,0.14) 0 2px, transparent 2px), radial-gradient(circle at 78% 80%, rgba(76,205,196,0.16) 0 2px, transparent 2px), radial-gradient(circle at 18% 76%, rgba(248,183,57,0.18) 0 2px, transparent 2px)',
-                        backgroundSize: '180px 180px',
-                    }} />
+                    <div className="pointer-events-none absolute left-9 top-0 h-full w-px bg-red-300/70" />
 
-                    <div className="relative grid gap-8 xl:grid-cols-[220px_minmax(0,1fr)]">
-                        <aside className="rounded-[24px] border-2 border-gray-200 bg-white/90 p-5">
-                            <p className="text-xs font-black uppercase tracking-[0.24em] text-gray-500">Organic Mind Mapping</p>
-                            <h3 className="mt-3 text-2xl font-bold text-gray-800" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                                {mindMapData.centralTopic || 'Mind Map'}
-                            </h3>
-                            <p className="mt-3 text-sm leading-6 text-gray-600">
-                                {mindMapData.quickSummary || 'No summary generated.'}
-                            </p>
-                            <div className="mt-6 space-y-4">
+                    <div className="relative min-h-[920px]">
+                        <div className="absolute left-1/2 top-1/2 z-20 w-[290px] -translate-x-1/2 -translate-y-1/2">
+                            <div className="relative rounded-[999px] border-[4px] border-[#4a4a4a] bg-[#f48cab] px-8 py-10 text-center shadow-[8px_10px_0_#e7c96f]">
+                                <div className="absolute inset-[6px] rounded-[999px] border-2 border-black/25" />
+                                <p className="relative text-[13px] font-black uppercase tracking-[0.24em] text-[#5a2838]">Mind Map</p>
+                                <h4 className="relative mt-3 text-4xl font-bold leading-tight text-[#3f3b3b] break-words" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                                    {mindMapData.centralTopic || 'Mind Map'}
+                                </h4>
+                                {mindMapData.quickSummary && (
+                                    <p className="relative mt-3 text-sm leading-5 text-[#4d4540]">
+                                        {mindMapData.quickSummary}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {cards.map((branch, idx) => {
+                            const color = branchColors[idx % branchColors.length];
+                            const layout = cardLayouts[idx];
+                            const children = (branch.children || []).slice(0, 4);
+                            const isTopLeft = idx === 0;
+                            const isBottomLeft = idx === 1;
+                            const isTopRight = idx === 2;
+                            const isBottomRight = idx === 3;
+
+                            return (
+                                <div
+                                    key={`${branch.title}-${idx}`}
+                                    className={`absolute ${layout.position} ${layout.width} ${layout.minHeight} hidden lg:block`}
+                                >
+                                    <div className="relative">
+                                        <svg className={`absolute ${arrows[idx]} h-20 w-20 text-[#8ca46d]`} viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                                            <path d="M12 60 C28 48, 42 34, 60 20" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+                                            <path d="M50 18 L60 20 L56 30" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+
+                                        <div
+                                            className={`relative border-[4px] border-[#4a4a4a] bg-white/50 px-5 py-4 shadow-[6px_6px_0_rgba(58,58,58,0.16)] ${isTopLeft || isBottomRight ? 'rounded-[4px]' : isTopRight ? 'rounded-[999px]' : 'rounded-[2px]'
+                                                }`}
+                                            style={{ backgroundColor: color.bubble }}
+                                        >
+                                            <div className="absolute inset-[6px] border-2 border-black/15 pointer-events-none" />
+                                            <h5 className="relative text-3xl font-bold text-[#3f3b3b] break-words" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                                                {branch.title || `Idea ${idx + 1}`}
+                                            </h5>
+                                        </div>
+
+                                        {branch.examAngle && (
+                                            <p className={`mt-4 text-sm font-semibold text-[#4d4540] ${isTopRight ? 'text-left' : ''}`}>
+                                                {branch.examAngle}
+                                            </p>
+                                        )}
+
+                                        {isTopLeft && children.length > 0 && (
+                                            <ul className="mt-4 space-y-1 pl-6 text-[15px] text-[#3f3b3b]">
+                                                {children.slice(0, 3).map((child, childIdx) => (
+                                                    <li key={childIdx}>- {child}</li>
+                                                ))}
+                                            </ul>
+                                        )}
+
+                                        {isBottomLeft && (
+                                            <div className="mt-4">
+                                                {children.slice(0, 3).map((child, childIdx) => (
+                                                    <div key={childIdx} className="mb-3 flex items-center gap-3 text-[15px] text-[#3f3b3b]">
+                                                        <span className="text-xl text-[#4a4a4a]">★</span>
+                                                        <span>{child}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {isTopRight && (
+                                            <div className="mt-4 rounded-[6px] bg-white/35 px-3 py-3">
+                                                {children.slice(0, 3).map((child, childIdx) => (
+                                                    <div key={childIdx} className="flex items-center gap-3 text-[15px] text-[#3f3b3b]">
+                                                        <span className="text-lg">•</span>
+                                                        <span className="font-semibold">{child}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {isBottomRight && (
+                                            <div className="mt-4 space-y-2 pl-3 text-[15px] text-[#3f3b3b]">
+                                                {children.slice(0, 3).map((child, childIdx) => (
+                                                    <div key={childIdx} className="border-l-[3px] border-dashed border-[#4a4a4a] pl-3">
+                                                        {child}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        <div className="relative mx-auto flex max-w-5xl flex-col gap-5 pt-[540px] lg:hidden">
+                            <div className="rounded-[28px] border-[4px] border-[#4a4a4a] bg-[#f48cab] px-6 py-6 text-center shadow-[6px_8px_0_#e7c96f]">
+                                <p className="text-xs font-black uppercase tracking-[0.24em] text-[#5a2838]">Mind Map</p>
+                                <h4 className="mt-2 text-3xl font-bold text-[#3f3b3b]" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                                    {mindMapData.centralTopic || 'Mind Map'}
+                                </h4>
+                                <p className="mt-2 text-sm text-[#4d4540]">{mindMapData.quickSummary || 'No summary generated.'}</p>
+                            </div>
+
+                            <div className="grid gap-4 md:grid-cols-2">
                                 {branches.map((branch, idx) => {
                                     const color = branchColors[idx % branchColors.length];
                                     return (
-                                        <div key={`${branch.title}-${idx}`} className="border-l-4 pl-3" style={{ borderColor: color.border }}>
-                                            <p className="font-bold text-gray-800">{branch.title || `Branch ${idx + 1}`}</p>
-                                            <ul className="mt-1 space-y-1 text-sm text-gray-600">
-                                                {(branch.children || []).slice(0, 3).map((child, childIdx) => <li key={childIdx}>• {child}</li>)}
+                                        <div key={`${branch.title}-mobile-${idx}`} className="rounded-[22px] border-[4px] border-[#4a4a4a] p-4 shadow-[4px_5px_0_rgba(58,58,58,0.15)]" style={{ backgroundColor: color.bubble }}>
+                                            <h5 className="text-2xl font-bold text-[#3f3b3b]" style={{ fontFamily: 'Patrick Hand, cursive' }}>
+                                                {branch.title || `Idea ${idx + 1}`}
+                                            </h5>
+                                            {branch.examAngle && <p className="mt-2 text-sm font-semibold text-[#4d4540]">{branch.examAngle}</p>}
+                                            <ul className="mt-3 space-y-2 text-sm text-[#3f3b3b]">
+                                                {(branch.children || []).slice(0, 4).map((child, childIdx) => (
+                                                    <li key={childIdx}>• {child}</li>
+                                                ))}
                                             </ul>
                                         </div>
                                     );
                                 })}
                             </div>
-                        </aside>
+                        </div>
 
-                        <div className="relative rounded-[28px] border-2 border-gray-200 bg-white/70 p-6 md:p-8 xl:p-10">
-                            <div className="grid items-start gap-10 xl:grid-cols-[minmax(0,1fr)_280px_minmax(0,1fr)]">
-                                <div className="space-y-10 pt-4">
-                                    {leftBranches.map((branch, laneIdx) => {
-                                        const idx = laneIdx * 2;
-                                        const color = branchColors[idx % branchColors.length];
-                                        return (
-                                            <div key={`${branch.title}-${idx}`} className="flex items-start gap-4">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex justify-end">
-                                                        <div
-                                                            className="max-w-full rounded-[999px] border-[3px] px-6 py-4 text-right"
-                                                            style={{ background: color.bubble, borderColor: color.border, boxShadow: `0 10px 24px ${color.line}22` }}
-                                                        >
-                                                            <p className="text-2xl font-bold text-gray-800 break-words" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                                                                {branch.title || `Branch ${idx + 1}`}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mr-2 ml-auto h-10 w-24 rounded-t-full border-l-[4px] border-t-[4px]" style={{ borderColor: color.line }} />
-                                                    {branch.examAngle && (
-                                                        <p className="mb-3 text-right text-sm font-semibold italic text-gray-600">{branch.examAngle}</p>
-                                                    )}
-                                                    <div className="flex flex-wrap justify-end gap-2">
-                                                        {(branch.children || []).map((child, childIdx) => (
-                                                            <div
-                                                                key={childIdx}
-                                                                className="rounded-full border px-4 py-2 text-sm text-gray-700"
-                                                                style={{ background: color.chip, borderColor: `${color.border}66` }}
-                                                            >
-                                                                {child}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-
-                                <div className="flex items-center justify-center py-10 xl:min-h-[760px]">
-                                    <div
-                                        className="z-20 flex h-[260px] w-[260px] flex-col items-center justify-center rounded-[999px] border-[4px] px-8 text-center"
-                                        style={{ background: '#fde68a', borderColor: '#ca8a04', boxShadow: '0 18px 36px rgba(202, 138, 4, 0.24)' }}
-                                    >
-                                        <p className="text-xs font-black uppercase tracking-[0.2em] text-amber-700">Core Topic</p>
-                                        <h4 className="mt-3 text-4xl font-bold leading-tight text-amber-900 break-words" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                                            {mindMapData.centralTopic || 'Mind Map'}
-                                        </h4>
-                                        {mindMapData.quickSummary && (
-                                            <p className="mt-4 text-sm leading-5 text-amber-900/80">{mindMapData.quickSummary}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                <div className="space-y-10 pt-4">
-                                    {rightBranches.map((branch, laneIdx) => {
-                                        const idx = laneIdx * 2 + 1;
-                                        const color = branchColors[idx % branchColors.length];
-                                        return (
-                                            <div key={`${branch.title}-${idx}`} className="flex items-start gap-4">
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex justify-start">
-                                                        <div
-                                                            className="max-w-full rounded-[999px] border-[3px] px-6 py-4 text-left"
-                                                            style={{ background: color.bubble, borderColor: color.border, boxShadow: `0 10px 24px ${color.line}22` }}
-                                                        >
-                                                            <p className="text-2xl font-bold text-gray-800 break-words" style={{ fontFamily: 'Patrick Hand, cursive' }}>
-                                                                {branch.title || `Branch ${idx + 1}`}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="ml-2 h-10 w-24 rounded-t-full border-r-[4px] border-t-[4px]" style={{ borderColor: color.line }} />
-                                                    {branch.examAngle && (
-                                                        <p className="mb-3 text-sm font-semibold italic text-gray-600">{branch.examAngle}</p>
-                                                    )}
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {(branch.children || []).map((child, childIdx) => (
-                                                            <div
-                                                                key={childIdx}
-                                                                className="rounded-full border px-4 py-2 text-sm text-gray-700"
-                                                                style={{ background: color.chip, borderColor: `${color.border}66` }}
-                                                            >
-                                                                {child}
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
+                        {overflowBranches.length > 0 && (
+                            <div className="absolute bottom-4 left-1/2 hidden w-[60%] -translate-x-1/2 rounded-[20px] border-2 border-[#d5cb9e] bg-white/45 px-5 py-4 lg:block">
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-[#7b745f]">Extra Links</p>
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {overflowBranches.map((branch, idx) => (
+                                        <span key={`${branch.title}-extra-${idx}`} className="rounded-full border border-[#7b745f] bg-[#fff9dd] px-3 py-1 text-sm text-[#4d4540]">
+                                            {branch.title}
+                                        </span>
+                                    ))}
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>

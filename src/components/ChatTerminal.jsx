@@ -18,6 +18,8 @@ import { AnimatePresence } from 'framer-motion';
 import { formatAIResponse } from '../utils/formatAI';
 import { useStudyStats } from '../hooks/useStudyStats';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
@@ -39,7 +41,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             return;
         }
         try {
-            const res = await fetch(`http://localhost:5000/api/history?session_id=${encodeURIComponent(sessionId)}`, {
+            const res = await fetch(`${API_URL}/api/history?session_id=${encodeURIComponent(sessionId)}`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             const data = await res.json();
@@ -64,7 +66,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
             return;
         }
         try {
-            const res = await fetch('http://localhost:5000/api/files', {
+            const res = await fetch(`${API_URL}/api/files`, {
                 headers: { Authorization: `Bearer ${authToken}` },
             });
             const data = await res.json();
@@ -79,7 +81,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
 
     const removeIndexedFile = async (id) => {
         try {
-            const res = await fetch(`http://localhost:5000/api/files/${id}`, {
+            const res = await fetch(`${API_URL}/api/files/${id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${authToken}` },
             });
@@ -133,7 +135,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
         setIsLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5000/api/chat', {
+            const response = await fetch(`${API_URL}/api/chat`, {
                 method: 'POST',
                 headers: authToken
                     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }
@@ -168,7 +170,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
         formData.append('files', file);
 
         try {
-            const res = await fetch('http://localhost:5000/api/upload', {
+            const res = await fetch(`${API_URL}/api/upload`, {
                 method: 'POST',
                 headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
                 body: formData
@@ -223,7 +225,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
         }
         if (window.confirm('🗑️ Delete this chat history?')) {
             try {
-                const res = await fetch(`http://localhost:5000/api/history?session_id=${encodeURIComponent(currentSessionId)}`, {
+                const res = await fetch(`${API_URL}/api/history?session_id=${encodeURIComponent(currentSessionId)}`, {
                     method: 'DELETE',
                     headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
                 });
@@ -240,7 +242,7 @@ const ChatTerminal = ({ authToken, selectedSessionId, newSessionToken }) => {
 
     const createNoteFromMsg = async (content) => {
         try {
-            const res = await fetch('http://localhost:5000/api/notes', {
+            const res = await fetch(`${API_URL}/api/notes`, {
                 method: 'POST',
                 headers: authToken
                     ? { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` }

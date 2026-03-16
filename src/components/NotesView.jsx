@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StickyNote, Search, Plus, Calendar, ChevronRight, Hash, Trash2 } from 'lucide-react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
 const NotesView = () => {
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -9,7 +11,7 @@ const NotesView = () => {
 
     const fetchNotes = async () => {
         try {
-            const res = await fetch('http://localhost:5000/api/notes');
+            const res = await fetch(`${API_URL}/api/notes`);
             const data = await res.json();
             setNotes(data.data || []);
         } catch (err) {
